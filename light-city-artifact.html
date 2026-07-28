@@ -1,0 +1,3088 @@
+<meta charset="UTF-8" />
+<style>
+/* =====================================================================
+   Light City — style.css
+   Theme variables, layout, per-city scenes, components, animations,
+   and full responsive behavior (desktop / tablet / mobile, both
+   orientations).
+   ===================================================================== */
+
+/* ---------------------------------------------------------------------
+   Reset + base
+   --------------------------------------------------------------------- */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body {
+  height: 100%;
+  overflow-x: hidden;
+  overscroll-behavior-x: none;
+}
+
+html {
+  scroll-behavior: smooth;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  transition: background 0.3s ease, color 0.3s ease;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  -webkit-tap-highlight-color: transparent;
+  /* Safe-area clearance for notches / home indicators (no-ops on devices without them). */
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
+}
+
+button {
+  font-family: inherit;
+  cursor: pointer;
+  border: none;
+  background: none;
+  color: inherit;
+  touch-action: manipulation;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+button:disabled { cursor: not-allowed; opacity: 0.45; }
+button:active { transform: scale(0.96); }
+
+.city-tab, .hud-btn {
+  touch-action: manipulation;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * { animation: none !important; transition: none !important; }
+}
+
+/* ---------------------------------------------------------------------
+   Theme variables
+   --------------------------------------------------------------------- */
+:root,
+body.theme-dark {
+  --bg: #0d0f1a;
+  --bg-elevated: #14172a;
+  --surface: #1b1f36;
+  --surface-alt: #242a49;
+  --border: #34395c;
+  --text: #eef0fa;
+  --text-dim: #9ba1c4;
+  --accent: #ffd93d;
+  --accent-2: #6bcbef;
+  --success: #4ecdc4;
+  --danger: #ff6b6b;
+  --shadow: 0 8px 24px rgba(0,0,0,0.45);
+  --radius: 14px;
+  --radius-sm: 8px;
+}
+
+body.theme-light {
+  --bg: #eef1fb;
+  --bg-elevated: #ffffff;
+  --surface: #ffffff;
+  --surface-alt: #f2f4fc;
+  --border: #d7dbee;
+  --text: #1b1f36;
+  --text-dim: #5a5f80;
+  --accent: #e8a800;
+  --accent-2: #2a8fb8;
+  --success: #1f9d90;
+  --danger: #d94848;
+  --shadow: 0 8px 24px rgba(30,35,70,0.12);
+}
+
+body.no-animations * {
+  animation: none !important;
+  transition: none !important;
+}
+
+.hidden { display: none !important; }
+
+/* ---------------------------------------------------------------------
+   HUD
+   --------------------------------------------------------------------- */
+.hud {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+  background: var(--bg-elevated);
+  border-bottom: 1px solid var(--border);
+  padding: calc(10px + env(safe-area-inset-top)) 16px 10px;
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  box-shadow: var(--shadow);
+}
+
+.hud-brand { display: flex; align-items: center; gap: 8px; font-weight: 800; font-size: 1.1rem; }
+.hud-logo { font-size: 1.4rem; filter: drop-shadow(0 0 6px var(--accent)); }
+.hud-title { background: linear-gradient(90deg, var(--accent), var(--accent-2)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+
+.hud-stats { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; flex: 1; }
+.hud-stat { display: flex; align-items: center; gap: 5px; font-size: 0.85rem; color: var(--text-dim); white-space: nowrap; }
+.hud-icon { font-size: 1rem; }
+.hud-value { color: var(--text); font-weight: 700; }
+
+.hud-actions { display: flex; gap: 6px; }
+.hud-btn {
+  position: relative;
+  font-size: 1.1rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 6px 10px;
+  transition: transform 0.15s ease, background 0.15s ease;
+}
+.hud-btn:hover { background: var(--surface-alt); transform: translateY(-1px); }
+
+.hud-cosmetic-title { font-size: 0.75rem; color: var(--accent); font-weight: 600; margin-left: 2px; }
+
+/* ---------------------------------------------------------------------
+   Income breakdown bar
+   --------------------------------------------------------------------- */
+.income-breakdown {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+  padding: 6px 16px;
+  font-size: 0.78rem;
+  color: var(--text-dim);
+  background: var(--bg);
+  border-bottom: 1px solid var(--border);
+}
+.income-part strong { color: var(--text); }
+.income-op { color: var(--accent); font-weight: 700; }
+.income-total { color: var(--success); font-weight: 800; }
+
+/* ---------------------------------------------------------------------
+   Active event buffs bar
+   --------------------------------------------------------------------- */
+.active-buffs-bar {
+  display: flex; gap: 8px; flex-wrap: wrap; padding: 0 16px;
+  background: var(--bg); border-bottom: 1px solid var(--border);
+  max-height: 0; overflow: hidden; transition: max-height 0.2s ease, padding 0.2s ease;
+}
+.active-buffs-bar:not(.hidden) { max-height: 60px; padding: 6px 16px; }
+.buff-chip {
+  background: linear-gradient(90deg, rgba(255,217,61,0.18), rgba(107,203,239,0.18));
+  border: 1px solid var(--accent);
+  border-radius: 999px; padding: 4px 10px; font-size: 0.76rem; font-weight: 700; color: var(--text);
+  animation: readyPulse 1.6s ease-in-out infinite;
+}
+
+/* ---------------------------------------------------------------------
+   Random Bonus Event orb
+   --------------------------------------------------------------------- */
+.event-orb-layer { position: absolute; inset: 0; z-index: 30; pointer-events: none; }
+.event-orb {
+  position: absolute;
+  pointer-events: auto;
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+  background: radial-gradient(circle at 30% 30%, #fff6c8, var(--accent) 70%);
+  color: #10121f;
+  border: 2px solid #fff;
+  border-radius: 999px;
+  padding: 10px 14px;
+  box-shadow: 0 0 18px 4px rgba(255,217,61,0.7);
+  animation: orbPulse 1.1s ease-in-out infinite;
+  cursor: pointer;
+  font-weight: 800;
+  transform: translate(-50%, -50%);
+}
+.event-orb-icon { font-size: 1.4rem; line-height: 1; }
+.event-orb-name { font-size: 0.68rem; white-space: nowrap; }
+.event-orb-timer { font-size: 0.62rem; opacity: 0.75; }
+
+@keyframes orbPulse {
+  0%, 100% { transform: translate(-50%, -50%) scale(1); box-shadow: 0 0 18px 4px rgba(255,217,61,0.7); }
+  50% { transform: translate(-50%, -50%) scale(1.08); box-shadow: 0 0 26px 8px rgba(255,217,61,0.9); }
+}
+
+.offline-multiplier-text { font-size: 0.72rem; color: var(--text-dim); }
+
+/* ---------------------------------------------------------------------
+   City tabs
+   --------------------------------------------------------------------- */
+.city-tabs {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  -webkit-overflow-scrolling: touch;
+  padding: 10px 16px;
+  background: var(--bg-elevated);
+  border-bottom: 1px solid var(--border);
+}
+
+/* Extra per-city details, rendered by game.js but only surfaced on the mobile
+   vertical-card layout below — desktop/tablet keep the existing compact pill look. */
+.city-tab-details { display: none; }
+.city-tab {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  font-size: 0.85rem;
+  white-space: nowrap;
+  transition: all 0.2s ease;
+}
+.city-tab:hover { background: var(--surface-alt); }
+.city-tab.active { background: linear-gradient(90deg, var(--accent), var(--accent-2)); color: #10121f; font-weight: 700; border-color: transparent; }
+.city-tab.locked { opacity: 0.6; }
+.city-tab-pct { font-size: 0.72rem; opacity: 0.85; }
+
+/* ---------------------------------------------------------------------
+   Game area / city scene
+   --------------------------------------------------------------------- */
+.game-area { flex: 1; display: flex; flex-direction: column; }
+
+.city-scene {
+  position: relative;
+  height: 220px;
+  overflow: hidden;
+  border-bottom: 1px solid var(--border);
+}
+.scene-sky, .scene-weather, .scene-skyline, .scene-ground { position: absolute; left: 0; right: 0; }
+.scene-sky { top: 0; bottom: 0; }
+.scene-ground { bottom: 0; height: 22%; }
+.scene-skyline { bottom: 22%; height: 55%; display: flex; align-items: flex-end; gap: 10px; padding: 0 24px; }
+.scene-weather { top: 0; bottom: 0; pointer-events: none; overflow: hidden; }
+
+.skyline-building {
+  flex: 1;
+  max-width: 60px;
+  background: var(--building-color, #444);
+  border-radius: 4px 4px 0 0;
+  opacity: 0.35;
+  transition: height 0.6s ease, opacity 0.6s ease;
+}
+.skyline-building.lit { opacity: 1; box-shadow: 0 0 14px var(--building-glow, rgba(255,255,255,0.25)); }
+
+.city-scene-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 14px 18px;
+  background: linear-gradient(180deg, rgba(0,0,0,0.15), rgba(0,0,0,0.35));
+}
+
+.city-completion { background: rgba(10,12,24,0.55); backdrop-filter: blur(4px); border-radius: var(--radius-sm); padding: 8px 12px; max-width: 320px; }
+.city-completion-label { display: flex; justify-content: space-between; color: #fff; font-weight: 700; font-size: 0.9rem; }
+.city-progress { margin: 6px 0 4px; }
+.city-stars { color: var(--accent); letter-spacing: 2px; }
+
+.prestige-cta-wrap { align-self: flex-end; }
+.btn-prestige {
+  background: linear-gradient(90deg, #a78bfa, var(--accent-2));
+  color: #10121f;
+  font-weight: 800;
+  padding: 10px 18px;
+  border-radius: 999px;
+  box-shadow: var(--shadow);
+  transition: transform 0.15s ease;
+}
+.btn-prestige:not(:disabled):hover { transform: translateY(-2px) scale(1.02); }
+
+/* ---- Per-city themes ------------------------------------------------ */
+.theme-green-village {
+  --building-color: #6b8f4e;
+  --building-glow: rgba(255,244,190,0.5);
+}
+.theme-green-village .scene-sky { background: linear-gradient(180deg, #a8dfff 0%, #fef3c7 70%, #d9f2c4 100%); }
+.theme-green-village .scene-ground { background: linear-gradient(180deg, #7cb356, #4d7a34); }
+.theme-green-village .scene-weather::before,
+.theme-green-village .scene-weather::after {
+  content: ''; position: absolute; top: 12%; width: 90px; height: 26px; border-radius: 50px;
+  background: rgba(255,255,255,0.85); box-shadow: 20px 8px 0 rgba(255,255,255,0.7), -20px 4px 0 rgba(255,255,255,0.6);
+  animation: drift 40s linear infinite;
+}
+.theme-green-village .scene-weather::after { top: 26%; left: -120px; animation-delay: -20s; }
+.theme-green-village .scene-weather::before { left: -60px; }
+
+.theme-river-town {
+  --building-color: #c96b4a;
+  --building-glow: rgba(255,170,110,0.55);
+}
+.theme-river-town .scene-sky { background: linear-gradient(180deg, #2c2350 0%, #b8446b 45%, #ffb37a 85%, #ffd9a0 100%); }
+.theme-river-town .scene-ground { background: linear-gradient(180deg, #3f7a9e, #274f68); }
+.theme-river-town .scene-weather::before {
+  content: ''; position: absolute; left: 50%; top: 18%; width: 70px; height: 70px; margin-left: -35px;
+  background: radial-gradient(circle, #ffe08a 0%, #ffb35a 60%, rgba(255,179,90,0) 100%);
+  border-radius: 50%; animation: pulseGlow 6s ease-in-out infinite;
+}
+
+.theme-metro-city {
+  --building-color: #3a3f66;
+  --building-glow: rgba(120,200,255,0.7);
+}
+.theme-metro-city .scene-sky { background: linear-gradient(180deg, #060814 0%, #101433 60%, #1a1f4a 100%); }
+.theme-metro-city .scene-ground { background: linear-gradient(180deg, #14172a, #05060c); }
+.theme-metro-city .scene-weather { background-image: radial-gradient(1.5px 1.5px at 20% 20%, #fff, transparent), radial-gradient(1.5px 1.5px at 60% 40%, #fff, transparent), radial-gradient(1px 1px at 80% 15%, #fff, transparent), radial-gradient(1.5px 1.5px at 35% 65%, #fff, transparent), radial-gradient(1px 1px at 90% 55%, #fff, transparent); animation: twinkle 3s ease-in-out infinite; }
+
+.theme-capital-city {
+  --building-color: #7a6a3f;
+  --building-glow: rgba(255,215,120,0.65);
+}
+.theme-capital-city .scene-sky { background: linear-gradient(180deg, #1a1330 0%, #3c1f4d 55%, #7a3b52 100%); }
+.theme-capital-city .scene-ground { background: linear-gradient(180deg, #4a3b1f, #241a0c); }
+.theme-capital-city .scene-weather::before {
+  content: ''; position: absolute; inset: 0;
+  background-image: radial-gradient(2px 2px at 15% 25%, gold, transparent), radial-gradient(1.5px 1.5px at 70% 15%, gold, transparent), radial-gradient(2px 2px at 45% 40%, gold, transparent);
+  animation: twinkle 4s ease-in-out infinite;
+}
+
+.theme-future-city {
+  --building-color: #1f2a4a;
+  --building-glow: rgba(0,255,225,0.85);
+}
+.theme-future-city .scene-sky { background: linear-gradient(180deg, #050014 0%, #170a33 55%, #2d0a4d 100%); }
+.theme-future-city .scene-ground {
+  background: repeating-linear-gradient(90deg, #0d0424, #0d0424 18px, #1c0b47 19px, #1c0b47 20px);
+  box-shadow: 0 -2px 20px rgba(0,255,225,0.35);
+}
+.theme-future-city .scene-weather::before {
+  content: ''; position: absolute; inset: 0;
+  background-image: radial-gradient(2px 2px at 25% 30%, #0ff, transparent), radial-gradient(2px 2px at 75% 20%, #f0f, transparent), radial-gradient(1.5px 1.5px at 55% 50%, #0ff, transparent);
+  animation: twinkle 2.4s ease-in-out infinite;
+}
+.theme-future-city .skyline-building.lit { animation: neonPulse 2.4s ease-in-out infinite; }
+
+/* ---------------------------------------------------------------------
+   Building grid + cards
+   --------------------------------------------------------------------- */
+.building-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 14px;
+  padding: 16px;
+}
+
+.building-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  box-shadow: var(--shadow);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.building-card:hover { transform: translateY(-2px); }
+.building-card.locked { align-items: center; text-align: center; gap: 10px; padding: 22px 14px; }
+.building-card.maxed { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent), var(--shadow); }
+
+.building-icon { font-size: 1.6rem; }
+.building-header { display: flex; align-items: center; gap: 8px; }
+.building-name { flex: 1; font-weight: 700; font-size: 0.95rem; }
+.building-level { font-size: 0.75rem; color: var(--text-dim); background: var(--surface-alt); padding: 2px 8px; border-radius: 999px; }
+
+.building-stats { display: flex; justify-content: space-between; font-size: 0.78rem; color: var(--text-dim); }
+
+.progress-bar { height: 8px; border-radius: 999px; background: var(--surface-alt); overflow: hidden; }
+.progress-fill { height: 100%; background: linear-gradient(90deg, var(--accent-2), var(--accent)); width: 0%; transition: width 0.15s linear; }
+.city-progress { height: 8px; }
+.city-progress .progress-fill { background: linear-gradient(90deg, #a78bfa, var(--accent-2)); }
+
+.collect-btn {
+  background: var(--surface-alt);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 8px;
+  font-weight: 700;
+  font-size: 0.85rem;
+  transition: all 0.2s ease;
+}
+.collect-btn.ready { background: linear-gradient(90deg, var(--accent), #ffb43d); color: #10121f; animation: readyPulse 1s ease-in-out infinite; }
+.collect-btn.auto { background: var(--surface); color: var(--text-dim); }
+
+.building-actions { display: flex; flex-direction: column; gap: 6px; }
+.btn { border-radius: var(--radius-sm); padding: 8px 10px; font-size: 0.82rem; font-weight: 600; transition: all 0.15s ease; }
+.btn-small { background: var(--surface-alt); border: 1px solid var(--border); }
+.btn-small:not(:disabled):hover { background: var(--border); }
+.btn-primary { background: linear-gradient(90deg, var(--accent-2), var(--accent)); color: #10121f; }
+.btn-secondary { background: var(--surface-alt); border: 1px solid var(--border); }
+.btn-danger { background: var(--danger); color: #fff; }
+.btn-upgrade { background: linear-gradient(90deg, #a78bfa, var(--accent-2)); color: #10121f; }
+.btn-auto { background: linear-gradient(90deg, var(--success), var(--accent-2)); color: #10121f; }
+.btn-block { width: 100%; }
+.upgrade-badge { text-align: center; font-size: 0.78rem; color: var(--success); font-weight: 700; }
+.building-lifetime { font-size: 0.7rem; color: var(--text-dim); text-align: right; }
+.building-prestige-level { color: var(--accent); }
+
+.glow-pulse { animation: glowPulse 0.9s ease-out; }
+
+/* ---------------------------------------------------------------------
+   Floating text / toasts / confetti / screen flash
+   --------------------------------------------------------------------- */
+.floating-layer { position: fixed; inset: 0; pointer-events: none; z-index: 200; }
+.floating-text {
+  position: fixed;
+  transform: translate(-50%, 0);
+  font-weight: 800;
+  color: var(--accent);
+  text-shadow: 0 1px 4px rgba(0,0,0,0.5);
+  animation: floatUp 1.2s ease-out forwards;
+  white-space: nowrap;
+}
+.floating-text.crit { color: #ff6b6b; font-size: 1.15em; }
+
+.toast-layer {
+  position: fixed;
+  top: calc(70px + env(safe-area-inset-top));
+  right: calc(16px + env(safe-area-inset-right));
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  z-index: 300;
+  max-width: 90vw;
+}
+.toast {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--accent-2);
+  border-radius: var(--radius-sm);
+  padding: 10px 14px;
+  font-size: 0.85rem;
+  box-shadow: var(--shadow);
+  animation: slideIn 0.25s ease-out;
+}
+.toast-success { border-left-color: var(--success); }
+.toast-error { border-left-color: var(--danger); }
+.toast-achievement { border-left-color: var(--accent); }
+.toast-out { opacity: 0; transform: translateX(20px); transition: all 0.3s ease; }
+
+.confetti-canvas { position: fixed; inset: 0; pointer-events: none; z-index: 250; display: none; }
+.confetti-canvas.active { display: block; }
+
+.screen-flash {
+  position: fixed; inset: 0; background: radial-gradient(circle, rgba(255,255,255,0.6), rgba(255,255,255,0));
+  z-index: 260; pointer-events: none; animation: flashOut 0.7s ease-out forwards;
+}
+
+/* ---------------------------------------------------------------------
+   Modals
+   --------------------------------------------------------------------- */
+.modal-overlay {
+  position: fixed; inset: 0; background: rgba(5,6,14,0.6);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 400; padding: 16px; backdrop-filter: blur(2px);
+  animation: fadeIn 0.2s ease-out;
+}
+.modal-overlay.hidden { display: none; }
+
+.modal {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 24px;
+  max-width: 420px;
+  width: 100%;
+  max-height: 85vh;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  text-align: center;
+  box-shadow: var(--shadow);
+  animation: popIn 0.25s ease-out;
+  padding-bottom: calc(24px + env(safe-area-inset-bottom));
+}
+.wide-modal { max-width: 640px; text-align: left; }
+
+.modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+.modal-close { font-size: 1.1rem; background: var(--surface-alt); border-radius: var(--radius-sm); padding: 4px 10px; }
+.modal-subtitle { color: var(--text-dim); font-size: 0.85rem; margin-bottom: 14px; }
+.modal-actions { display: flex; gap: 10px; margin-top: 18px; justify-content: center; }
+.modal h2 { margin-bottom: 8px; }
+.modal p { color: var(--text-dim); font-size: 0.9rem; margin-bottom: 6px; }
+
+.completion-badge { font-size: 3rem; margin-bottom: 6px; animation: popIn 0.4s ease-out; }
+.completion-reward, .prestige-warning { color: var(--text); }
+.prestige-warning { font-size: 0.78rem; color: var(--text-dim); }
+.offline-earned { font-size: 1.4rem; font-weight: 800; color: var(--success); margin: 10px 0; }
+
+.unlock-preview { height: 90px; border-radius: var(--radius-sm); margin-bottom: 14px; background-size: cover; }
+.unlock-preview.theme-green-village { background: linear-gradient(180deg, #a8dfff, #d9f2c4); }
+.unlock-preview.theme-river-town { background: linear-gradient(180deg, #2c2350, #ffb37a); }
+.unlock-preview.theme-metro-city { background: linear-gradient(180deg, #060814, #1a1f4a); }
+.unlock-preview.theme-capital-city { background: linear-gradient(180deg, #1a1330, #7a3b52); }
+.unlock-preview.theme-future-city { background: linear-gradient(180deg, #050014, #2d0a4d); }
+.unlock-reward { color: var(--success); font-weight: 700; }
+.unlock-cost { color: var(--accent); font-weight: 700; }
+
+.prestige-shop-list, .achievements-list, .stats-list { display: flex; flex-direction: column; gap: 10px; }
+.achievements-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 10px; }
+
+.shop-row { display: flex; align-items: center; gap: 10px; background: var(--surface-alt); border-radius: var(--radius-sm); padding: 10px; }
+.shop-row.maxed { opacity: 0.7; }
+.shop-icon { font-size: 1.5rem; }
+.shop-info { flex: 1; }
+.shop-name { font-weight: 700; font-size: 0.88rem; }
+.shop-level { color: var(--text-dim); font-size: 0.72rem; font-weight: 400; }
+.shop-desc { color: var(--text-dim); font-size: 0.76rem; }
+
+.achievement-card { background: var(--surface-alt); border-radius: var(--radius-sm); padding: 12px; text-align: center; }
+.achievement-card.locked { opacity: 0.5; }
+.achievement-icon { font-size: 1.6rem; }
+.achievement-name { font-weight: 700; font-size: 0.85rem; margin: 4px 0; }
+.achievement-desc { font-size: 0.72rem; color: var(--text-dim); }
+.achievement-bonus { font-size: 0.72rem; color: var(--success); margin-top: 4px; }
+
+.stat-row { display: flex; justify-content: space-between; background: var(--surface-alt); border-radius: var(--radius-sm); padding: 8px 12px; font-size: 0.85rem; }
+
+/* ---- Settings ---------------------------------------------------- */
+.settings-list { display: flex; flex-direction: column; gap: 12px; text-align: left; }
+.settings-row { display: flex; justify-content: space-between; align-items: center; font-size: 0.9rem; }
+.settings-divider { border: none; border-top: 1px solid var(--border); margin: 4px 0; }
+
+.segmented { display: flex; background: var(--surface-alt); border-radius: 999px; padding: 3px; }
+.seg-btn { padding: 5px 12px; border-radius: 999px; font-size: 0.8rem; }
+.seg-btn.active { background: linear-gradient(90deg, var(--accent-2), var(--accent)); color: #10121f; font-weight: 700; }
+
+.switch { position: relative; display: inline-block; width: 42px; height: 24px; }
+.switch input { opacity: 0; width: 0; height: 0; }
+.slider { position: absolute; cursor: pointer; inset: 0; background: var(--surface-alt); border: 1px solid var(--border); border-radius: 999px; transition: 0.2s; }
+.slider::before { content: ''; position: absolute; height: 18px; width: 18px; left: 2px; bottom: 2px; background: var(--text-dim); border-radius: 50%; transition: 0.2s; }
+.switch input:checked + .slider { background: var(--accent-2); }
+.switch input:checked + .slider::before { transform: translateX(18px); background: #10121f; }
+
+/* ---------------------------------------------------------------------
+   Animations
+   --------------------------------------------------------------------- */
+@keyframes floatUp { 0% { opacity: 1; transform: translate(-50%, 0); } 100% { opacity: 0; transform: translate(-50%, -60px); } }
+@keyframes slideIn { from { opacity: 0; transform: translateX(20px); } to { opacity: 1; transform: translateX(0); } }
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes popIn { from { opacity: 0; transform: scale(0.9); } to { opacity: 1; transform: scale(1); } }
+@keyframes flashOut { from { opacity: 1; } to { opacity: 0; } }
+@keyframes readyPulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(255,217,61,0.5); } 50% { box-shadow: 0 0 0 6px rgba(255,217,61,0); } }
+@keyframes glowPulse { 0% { box-shadow: 0 0 0 0 var(--accent); } 100% { box-shadow: 0 0 24px 6px transparent; } }
+@keyframes drift { from { transform: translateX(0); } to { transform: translateX(120vw); } }
+@keyframes pulseGlow { 0%, 100% { opacity: 0.7; } 50% { opacity: 1; } }
+@keyframes twinkle { 0%, 100% { opacity: 0.6; } 50% { opacity: 1; } }
+@keyframes neonPulse { 0%, 100% { filter: brightness(1); } 50% { filter: brightness(1.4); } }
+
+/* =======================================================================
+   Responsive — tablet / mobile / landscape / safe-area
+   Desktop styles above are the baseline design; everything below only
+   ADAPTS layout for smaller screens without altering colors, components,
+   or gameplay. Tiers: >900px desktop (default), 601-900px tablet,
+   <=600px mobile phones, plus landscape-height and reduced-motion cases.
+   ======================================================================= */
+
+/* ---- Tablet (two-column grids, slightly denser HUD) ------------------ */
+@media (max-width: 900px) {
+  .hud-stats { gap: 10px; }
+  .hud-stat { font-size: 0.78rem; }
+  .city-scene { height: 180px; }
+  .building-grid { grid-template-columns: repeat(2, 1fr); }
+  .achievements-list { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
+}
+
+/* ---- Mobile phones (320-768px) ---------------------------------------
+   Everything fits within the viewport width, nothing scrolls sideways,
+   tap targets grow to a comfortable minimum, and the HUD/city list
+   restructure into stacked cards. */
+@media (max-width: 768px) {
+  /* Ambient/decorative loops only — floating income, building glow, toasts,
+     confetti and popIn (achievement/prestige) animations are untouched. */
+  .theme-green-village .scene-weather::before,
+  .theme-green-village .scene-weather::after,
+  .theme-river-town .scene-weather::before,
+  .theme-metro-city .scene-weather,
+  .theme-capital-city .scene-weather::before,
+  .theme-future-city .scene-weather::before,
+  .theme-future-city .skyline-building.lit,
+  .event-orb {
+    animation: none;
+  }
+  .event-orb { box-shadow: 0 0 10px 2px rgba(255,217,61,0.6); }
+}
+
+@media (max-width: 600px) {
+  /* ---- Header / HUD --------------------------------------------------- */
+  .hud {
+    padding: calc(8px + env(safe-area-inset-top)) 10px 8px;
+    gap: 8px;
+    row-gap: 6px;
+  }
+  .hud-title { display: none; }
+  .hud-brand { font-size: 1rem; min-width: 0; }
+  .hud-cosmetic-title { display: none; } /* saves space on the smallest screens; still visible in Achievements */
+
+  .hud-stats {
+    order: 3;
+    width: 100%;
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+  }
+  .hud-stat {
+    background: var(--surface-alt);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 8px 10px;
+    font-size: clamp(0.68rem, 2.8vw, 0.8rem);
+    justify-content: flex-start;
+    overflow: hidden;
+  }
+  .hud-value { overflow: hidden; text-overflow: ellipsis; }
+  .hud-actions { margin-left: auto; gap: 8px; }
+  .hud-btn { min-width: 44px; min-height: 44px; padding: 8px; font-size: 1.2rem; }
+
+  .income-breakdown { font-size: 0.72rem; padding: 6px 10px; }
+
+  /* ---- City menu: vertical cards with full detail ---------------------- */
+  .city-tabs {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+    padding: 12px;
+    overflow-x: visible;
+  }
+  .city-tab {
+    flex-wrap: wrap;
+    width: 100%;
+    padding: 14px;
+    border-radius: var(--radius-sm);
+    min-height: 44px;
+  }
+  .city-tab-name { font-size: 1rem; }
+  .city-tab-details {
+    display: flex;
+    width: 100%;
+    justify-content: space-between;
+    margin-top: 6px;
+    padding-top: 6px;
+    border-top: 1px solid rgba(255,255,255,0.12);
+    font-size: 0.76rem;
+    color: var(--text-dim);
+  }
+  .city-tab.active .city-tab-details { color: rgba(16,18,31,0.75); border-top-color: rgba(16,18,31,0.2); }
+  .city-tab-status { font-weight: 700; }
+
+  /* ---- City scene -------------------------------------------------- */
+  .city-scene { height: 150px; }
+  .city-completion { max-width: 100%; }
+
+  /* ---- Building grid + cards ----------------------------------------- */
+  .building-grid { grid-template-columns: 1fr; padding: 10px; gap: 12px; }
+  .building-card { padding: 16px; gap: 10px; }
+  .building-card:hover { transform: none; } /* avoid a "stuck hover" look after tapping on touch devices */
+  .building-name { font-size: clamp(0.9rem, 3.6vw, 1rem); overflow-wrap: anywhere; }
+  .building-icon { font-size: 1.8rem; }
+  .building-stats { font-size: 0.8rem; flex-wrap: wrap; gap: 4px; }
+
+  /* ---- Buttons: comfortable 48px touch targets everywhere ------------- */
+  .btn, .collect-btn, .hud-btn, .city-tab, .seg-btn {
+    min-height: 48px;
+    font-size: clamp(0.82rem, 3.2vw, 0.95rem);
+  }
+  .building-actions .btn { min-height: 46px; }
+  .btn-prestige { min-height: 48px; width: 100%; }
+  .prestige-cta-wrap { width: 100%; align-self: stretch; }
+
+  /* ---- Modals: 92% width, stacked full-width actions -------------------- */
+  .modal-overlay { padding: 10px; }
+  .modal { width: 92%; padding: 20px; }
+  .wide-modal { width: 94%; }
+  .modal h2 { font-size: clamp(1.05rem, 4.5vw, 1.3rem); }
+  .modal-actions { flex-direction: column; }
+  .modal-actions .btn { width: 100%; min-height: 48px; }
+  .achievements-list { grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); }
+  .prestige-shop-list .shop-row { flex-wrap: wrap; }
+
+  /* ---- Toasts / floating layer: clear of home indicator ---------------- */
+  .toast-layer {
+    top: auto;
+    bottom: calc(12px + env(safe-area-inset-bottom));
+    right: 12px;
+    left: 12px;
+    max-width: 100%;
+  }
+}
+
+@media (max-width: 360px) {
+  .hud-stats { grid-template-columns: repeat(2, 1fr); gap: 6px; }
+  .hud-stat { padding: 6px 8px; }
+  .building-grid { padding: 8px; gap: 10px; }
+}
+
+/* ---- Landscape phones (short viewport height) ------------------------- */
+@media (max-width: 900px) and (orientation: landscape) and (max-height: 500px) {
+  .city-scene { height: 110px; }
+  .hud { padding-top: calc(6px + env(safe-area-inset-top)); padding-bottom: 6px; }
+  .hud-stats { grid-template-columns: repeat(3, 1fr); }
+  .building-grid { grid-template-columns: repeat(3, 1fr); padding: 8px; gap: 8px; }
+  .city-tabs { flex-direction: row; overflow-x: auto; }
+  .city-tab-details { display: none; } /* not enough vertical room for the mobile detail card */
+  .modal { max-height: 80vh; }
+}
+
+</style>
+
+
+  <!-- ============ TOP HUD ============ -->
+  <header id="hud" class="hud">
+    <div class="hud-brand">
+      <span class="hud-logo">⚡</span>
+      <span class="hud-title">Light City</span>
+      <span id="hud-cosmetic-title" class="hud-cosmetic-title hidden"></span>
+    </div>
+
+    <div class="hud-stats">
+      <div class="hud-stat" title="Current Sparks">
+        <span class="hud-icon">⚡</span>
+        <span id="hud-sparks" class="hud-value">0</span>
+      </div>
+      <div class="hud-stat" title="Sparks per second">
+        <span class="hud-icon">📈</span>
+        <span id="hud-sps" class="hud-value">0</span>/s
+      </div>
+      <div class="hud-stat" title="Total Lifetime Income">
+        <span class="hud-icon">🏦</span>
+        <span id="hud-lifetime" class="hud-value">0</span>
+      </div>
+      <div class="hud-stat" title="Ultimate Sparks">
+        <span class="hud-icon">⭐</span>
+        <span id="hud-ultimate" class="hud-value">0</span>
+      </div>
+      <div class="hud-stat" title="Prestige Count">
+        <span class="hud-icon">🔁</span>
+        <span id="hud-prestige" class="hud-value">0</span>
+      </div>
+      <div class="hud-stat" title="Current City">
+        <span class="hud-icon">🏙️</span>
+        <span id="hud-city" class="hud-value">Green Village</span>
+      </div>
+    </div>
+
+    <div class="hud-actions">
+      <button id="btn-stats" class="hud-btn" title="Statistics">📊</button>
+      <button id="btn-achievements" class="hud-btn" title="Achievements">🏆</button>
+      <button id="btn-prestige-shop" class="hud-btn" title="Prestige Shop">⭐</button>
+      <button id="btn-settings" class="hud-btn" title="Settings">⚙️</button>
+    </div>
+  </header>
+
+  <!-- ============ CITY TOTAL INCOME BAR ============ -->
+  <div id="income-breakdown" class="income-breakdown"></div>
+
+  <!-- ============ ACTIVE EVENT BUFFS ============ -->
+  <div id="active-buffs-bar" class="active-buffs-bar"></div>
+
+  <!-- ============ CITY TABS ============ -->
+  <nav id="city-tabs" class="city-tabs"></nav>
+
+  <!-- ============ MAIN GAME AREA ============ -->
+  <main id="game-area" class="game-area">
+
+    <!-- City scene (background/skyline/weather) -->
+    <section id="city-scene" class="city-scene">
+      <div id="scene-sky" class="scene-sky"></div>
+      <div id="scene-weather" class="scene-weather"></div>
+      <div id="scene-skyline" class="scene-skyline"></div>
+      <div id="scene-ground" class="scene-ground"></div>
+
+      <div class="city-scene-overlay">
+        <div class="city-completion">
+          <div class="city-completion-label">
+            <span id="city-completion-name">Green Village</span>
+            <span id="city-completion-pct">0%</span>
+          </div>
+          <div class="progress-bar city-progress">
+            <div id="city-progress-fill" class="progress-fill"></div>
+          </div>
+          <div class="city-stars" id="city-stars">☆☆☆</div>
+        </div>
+        <div class="prestige-cta-wrap">
+          <button id="btn-prestige" class="btn-prestige" disabled>🔁 Prestige</button>
+        </div>
+      </div>
+
+      <!-- Random Bonus Event orb spawns here -->
+      <div id="event-orb-layer" class="event-orb-layer"></div>
+    </section>
+
+    <!-- Building grid -->
+    <section id="building-grid" class="building-grid"></section>
+  </main>
+
+  <!-- ============ FLOATING TEXT LAYER ============ -->
+  <div id="floating-layer" class="floating-layer"></div>
+
+  <!-- ============ NOTIFICATION TOASTS ============ -->
+  <div id="toast-layer" class="toast-layer"></div>
+
+  <!-- ============ CONFETTI LAYER ============ -->
+  <canvas id="confetti-canvas" class="confetti-canvas"></canvas>
+
+  <!-- ============ MODALS ============ -->
+
+  <!-- City unlock screen -->
+  <div id="modal-unlock" class="modal-overlay hidden">
+    <div class="modal unlock-modal">
+      <div class="unlock-preview" id="unlock-preview"></div>
+      <h2 id="unlock-city-name">City Name</h2>
+      <p class="unlock-reward" id="unlock-city-reward">Reward</p>
+      <p class="unlock-cost">Cost: <span id="unlock-city-cost">0</span> ⚡</p>
+      <div class="modal-actions">
+        <button id="btn-unlock-confirm" class="btn btn-primary">Unlock City</button>
+        <button id="btn-unlock-cancel" class="btn btn-secondary">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- City completion celebration -->
+  <div id="modal-completion" class="modal-overlay hidden">
+    <div class="modal completion-modal">
+      <div class="completion-badge">🏆</div>
+      <h2>City Complete!</h2>
+      <p id="completion-city-name">Green Village</p>
+      <p class="completion-reward" id="completion-reward-text"></p>
+      <button id="btn-completion-close" class="btn btn-primary">Continue</button>
+    </div>
+  </div>
+
+  <!-- Prestige confirm -->
+  <div id="modal-prestige" class="modal-overlay hidden">
+    <div class="modal prestige-modal">
+      <div class="completion-badge">🔁</div>
+      <h2>Prestige</h2>
+      <p>Reset your progress in exchange for <strong id="prestige-gain-preview">0</strong> ⭐ Ultimate Sparks.</p>
+      <p class="prestige-warning">Sparks, buildings, levels, upgrades, auto collectors, and city unlocks will reset. Ultimate Sparks, Lifetime Sparks, Prestige Upgrades and Achievements are kept.</p>
+      <div class="modal-actions">
+        <button id="btn-prestige-confirm" class="btn btn-primary">Confirm Prestige</button>
+        <button id="btn-prestige-cancel" class="btn btn-secondary">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Prestige shop -->
+  <div id="modal-prestige-shop" class="modal-overlay hidden">
+    <div class="modal wide-modal">
+      <div class="modal-header">
+        <h2>⭐ Prestige Shop</h2>
+        <button class="modal-close" data-close="modal-prestige-shop">✕</button>
+      </div>
+      <p class="modal-subtitle">Ultimate Sparks: <span id="shop-ultimate-balance">0</span> ⭐</p>
+      <div id="prestige-shop-list" class="prestige-shop-list"></div>
+    </div>
+  </div>
+
+  <!-- Achievements -->
+  <div id="modal-achievements" class="modal-overlay hidden">
+    <div class="modal wide-modal">
+      <div class="modal-header">
+        <h2>🏆 Achievements</h2>
+        <button class="modal-close" data-close="modal-achievements">✕</button>
+      </div>
+      <p class="modal-subtitle"><span id="achievements-progress">0/0</span> unlocked</p>
+      <div id="achievements-list" class="achievements-list"></div>
+    </div>
+  </div>
+
+  <!-- Statistics -->
+  <div id="modal-stats" class="modal-overlay hidden">
+    <div class="modal wide-modal">
+      <div class="modal-header">
+        <h2>📊 Statistics</h2>
+        <button class="modal-close" data-close="modal-stats">✕</button>
+      </div>
+      <div id="stats-list" class="stats-list"></div>
+    </div>
+  </div>
+
+  <!-- Settings -->
+  <div id="modal-settings" class="modal-overlay hidden">
+    <div class="modal">
+      <div class="modal-header">
+        <h2>⚙️ Settings</h2>
+        <button class="modal-close" data-close="modal-settings">✕</button>
+      </div>
+      <div class="settings-list">
+        <div class="settings-row">
+          <span>Theme</span>
+          <div class="segmented" id="setting-theme">
+            <button data-value="dark" class="seg-btn active">🌙 Dark</button>
+            <button data-value="light" class="seg-btn">☀️ Light</button>
+          </div>
+        </div>
+        <div class="settings-row"><span>Sound Effects</span><label class="switch"><input type="checkbox" id="setting-sound" checked><span class="slider"></span></label></div>
+        <div class="settings-row"><span>Music</span><label class="switch"><input type="checkbox" id="setting-music"><span class="slider"></span></label></div>
+        <div class="settings-row"><span>Animations</span><label class="switch"><input type="checkbox" id="setting-animations" checked><span class="slider"></span></label></div>
+        <div class="settings-row"><span>Floating Numbers</span><label class="switch"><input type="checkbox" id="setting-floating" checked><span class="slider"></span></label></div>
+        <div class="settings-row"><span>Notifications</span><label class="switch"><input type="checkbox" id="setting-notifications" checked><span class="slider"></span></label></div>
+        <hr class="settings-divider" />
+        <div class="settings-row">
+          <button id="btn-export-save" class="btn btn-secondary btn-block">Export Save</button>
+        </div>
+        <div class="settings-row">
+          <button id="btn-import-save" class="btn btn-secondary btn-block">Import Save</button>
+        </div>
+        <div class="settings-row">
+          <button id="btn-reset-save" class="btn btn-danger btn-block">Reset Save</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Offline earnings popup -->
+  <div id="modal-offline" class="modal-overlay hidden">
+    <div class="modal">
+      <div class="completion-badge">☕</div>
+      <h2>Welcome Back!</h2>
+      <p id="offline-time-away">You were away for 0m.</p>
+      <p class="offline-earned">+<span id="offline-earned-amount">0</span> ⚡</p>
+      <p class="offline-multiplier-text" id="offline-multiplier"></p>
+      <button id="btn-offline-close" class="btn btn-primary">Collect</button>
+    </div>
+  </div>
+
+  <!-- Hidden file input for import -->
+  <input type="file" id="import-file-input" accept=".json,application/json" style="display:none" />
+
+  <script>window.Game = {};</script>
+  <script>
+/**
+ * cities.js
+ * Static city data + city-level logic: unlocking, switching, completion,
+ * permanent rewards, and the visual "scene" (sky/skyline/ground/weather).
+ */
+(function () {
+  'use strict';
+
+  // ---------------------------------------------------------------------
+  // Static city definitions
+  // ---------------------------------------------------------------------
+  const CITY_DATA = [
+    {
+      id: 'green_village',
+      name: 'Green Village',
+      unlockCost: 0,
+      theme: 'theme-green-village',
+      atmosphere: 'Morning',
+      rewardKey: 'globalIncomeMult',
+      rewardAmount: 0.10,
+      rewardLabel: '+10% Global Income',
+      buildingNames: ['Hut', 'Grocery Shop', 'Bakery', 'Café', 'Workshop', 'Warehouse'],
+    },
+    {
+      id: 'river_town',
+      name: 'River Town',
+      unlockCost: 1e6,
+      theme: 'theme-river-town',
+      atmosphere: 'Sunset',
+      rewardKey: 'productionSpeedMult',
+      rewardAmount: 0.10,
+      rewardLabel: '+10% Production Speed',
+      buildingNames: ['Restaurant', 'Clothing Store', 'Pharmacy', 'Electronics Shop', 'Hotel', 'Factory'],
+    },
+    {
+      id: 'metro_city',
+      name: 'Metro City',
+      unlockCost: 1e8,
+      theme: 'theme-metro-city',
+      atmosphere: 'Night Lights',
+      rewardKey: 'offlineIncomeMult',
+      rewardAmount: 0.15,
+      rewardLabel: '+15% Offline Income',
+      buildingNames: ['Bank', 'Shopping Mall', 'Cinema', 'Supermarket', 'Hospital', 'Technology Center'],
+    },
+    {
+      id: 'capital_city',
+      name: 'Capital City',
+      unlockCost: 1e10,
+      theme: 'theme-capital-city',
+      atmosphere: 'Luxury Skyline',
+      rewardKey: 'autoCollectorSpeedMult',
+      rewardAmount: 0.20,
+      rewardLabel: '+20% Auto Collector Speed',
+      buildingNames: ['Airport', 'University', 'Corporate Office', 'Industrial Park', 'Stadium', 'Financial Center'],
+    },
+    {
+      id: 'future_city',
+      name: 'Future City',
+      unlockCost: 1e12,
+      theme: 'theme-future-city',
+      atmosphere: 'Cyberpunk Neon',
+      rewardKey: 'ultimateSparkGainMult',
+      rewardAmount: 0.25,
+      rewardLabel: '+25% Ultimate Spark Gain',
+      buildingNames: ['AI Laboratory', 'Space Port', 'Quantum Factory', 'Energy Core', 'Mega Tower', 'Smart City Hub'],
+    },
+  ];
+
+  const Cities = {
+    data: CITY_DATA,
+
+    /** Returns the static definition for a city id. */
+    getDef(cityId) {
+      return CITY_DATA.find((c) => c.id === cityId);
+    },
+
+    getDefByIndex(index) {
+      return CITY_DATA[index];
+    },
+
+    /** Fresh per-save city state (used on new game + after prestige). */
+    createFreshCityState(cityId) {
+      const def = Cities.getDef(cityId);
+      const isFirst = def.unlockCost === 0;
+      return {
+        id: cityId,
+        unlocked: isFirst,
+        completed: false,
+        rewardEarned: false, // set true permanently once completion reward granted (kept across prestige)
+        buildings: def.buildingNames.map((name, index) =>
+          Game.Buildings.createFreshBuildingState(cityId, index)
+        ),
+      };
+    },
+
+    /** Builds the initial `cities` map for a brand-new save. */
+    createFreshCitiesMap() {
+      const map = {};
+      CITY_DATA.forEach((def) => {
+        map[def.id] = Cities.createFreshCityState(def.id);
+      });
+      return map;
+    },
+
+    /** Resets progression on prestige, but preserves permanent rewards + unlock flag for city 1. */
+    resetForPrestige() {
+      const fresh = Cities.createFreshCitiesMap();
+      CITY_DATA.forEach((def) => {
+        const oldState = Game.state.cities[def.id];
+        if (oldState && oldState.rewardEarned) {
+          // Permanent city rewards survive prestige even though the city re-locks.
+          fresh[def.id].rewardEarned = true;
+        }
+      });
+      Game.state.cities = fresh;
+      Game.state.currentCityId = 'green_village';
+    },
+
+    getState(cityId) {
+      return Game.state.cities[cityId];
+    },
+
+    getCurrent() {
+      return Cities.getState(Game.state.currentCityId);
+    },
+
+    isUnlocked(cityId) {
+      return Cities.getState(cityId).unlocked;
+    },
+
+    /** Opens the animated unlock screen (or unlocks instantly if already affordable & confirmed). */
+    requestUnlock(cityId) {
+      const def = Cities.getDef(cityId);
+      const state = Cities.getState(cityId);
+      if (state.unlocked) {
+        Cities.switchTo(cityId);
+        return;
+      }
+      Game.UI.openUnlockModal(def);
+    },
+
+    confirmUnlock(cityId) {
+      const def = Cities.getDef(cityId);
+      const state = Cities.getState(cityId);
+      if (state.unlocked) return false;
+      if (Game.state.sparks < def.unlockCost) return false;
+
+      Game.state.sparks -= def.unlockCost;
+      state.unlocked = true;
+      Game.Audio.play('unlock');
+      Game.UI.notify(`${def.name} unlocked!`, 'success');
+      Game.Achievements.check();
+      Cities.switchTo(cityId);
+      Game.UI.playScreenTransition();
+      Game.Save.save();
+      return true;
+    },
+
+    switchTo(cityId) {
+      if (!Cities.isUnlocked(cityId)) return;
+      Game.state.currentCityId = cityId;
+      Game.UI.renderCityTabs();
+      Game.UI.renderScene();
+      Game.UI.renderBuildingGrid();
+      Game.UI.updateCityCompletionBar();
+    },
+
+    /** Total buildings maxed (level 100) inside a city. */
+    countMaxedBuildings(cityId) {
+      return Cities.getState(cityId).buildings.filter((b) => b.level >= Game.Buildings.MAX_LEVEL).length;
+    },
+
+    completionPercent(cityId) {
+      const maxed = Cities.countMaxedBuildings(cityId);
+      return Math.floor((maxed / 6) * 100);
+    },
+
+    starRating(cityId) {
+      const pct = Cities.completionPercent(cityId);
+      if (pct >= 100) return 3;
+      if (pct >= 66) return 2;
+      if (pct >= 33) return 1;
+      return 0;
+    },
+
+    /** Called after any level-up to check whether the city just became fully complete. */
+    checkCompletion(cityId) {
+      const state = Cities.getState(cityId);
+      if (state.completed) return;
+      if (Cities.countMaxedBuildings(cityId) < 6) return;
+
+      state.completed = true;
+      if (!state.rewardEarned) {
+        state.rewardEarned = true;
+      }
+      if (!Game.state.stats.citiesCompletedEver[cityId]) {
+        Game.state.stats.citiesCompletedEver[cityId] = true;
+        Game.state.stats.citiesCompletedCount++;
+      }
+      Game.Audio.play('achievement');
+      Game.UI.showCityCompletionModal(cityId);
+      Game.UI.spawnConfetti();
+      Game.Achievements.check();
+      Game.Save.save();
+    },
+
+    /** Sum of a given permanent-reward multiplier across all cities that have earned it. */
+    getRewardMultiplier(rewardKey) {
+      let mult = 1;
+      CITY_DATA.forEach((def) => {
+        if (def.rewardKey !== rewardKey) return;
+        const state = Game.state.cities[def.id];
+        if (state && state.rewardEarned) mult += def.rewardAmount;
+      });
+      return mult;
+    },
+
+    /** Sparks/sec currently produced by a given city (auto-collected buildings only). */
+    incomePerSec(cityId) {
+      const state = Cities.getState(cityId);
+      if (!state || !state.unlocked) return 0;
+      return state.buildings.reduce((sum, b) => sum + Game.Buildings.getIncomePerSec(b), 0);
+    },
+
+    totalIncomePerSec() {
+      return CITY_DATA.reduce((sum, def) => sum + Cities.incomePerSec(def.id), 0);
+    },
+  };
+
+  window.Game.Cities = Cities;
+})();
+
+</script>
+  <script>
+/**
+ * buildings.js
+ * Building data, cost/income formulas, and all building-level actions:
+ * unlocking, leveling, the one-time upgrade, auto collectors, and
+ * manual/auto production collection.
+ */
+(function () {
+  'use strict';
+
+  const MAX_LEVEL = 100;
+  const AUTO_COLLECTOR_MIN_LEVEL = 20;
+
+  // Base unlock cost of "building slot 0" for each city tier (index matches CITY_DATA order).
+  const BUILDING_BASE_COST = [10, 15000, 1500000, 150000000, 15000000000];
+  const BUILDING_COST_GROWTH = 7;      // cost multiplier per building slot (0-5) within a city
+  const LEVEL_COST_GROWTH = 1.15;      // cost multiplier per level-up
+  const LEVEL_INCOME_GROWTH = 1.13;    // income multiplier per level-up
+  const INCOME_TO_COST_RATIO = 0.10;   // base income per cycle, relative to unlock cost
+  const BASE_INTERVAL = 4;             // seconds, for building slot 0
+  const INTERVAL_STEP = 0.5;           // extra seconds per building slot within a city
+  const UPGRADE_COST_MULT = 40;        // upgrade cost relative to unlock cost
+  const UPGRADE_INCOME_MULT = 3;       // the one-time upgrade triples income
+  const AUTO_COLLECTOR_COST_MULT = 15; // auto collector cost relative to unlock cost
+  const LEVEL_UP_BASE_COST_RATIO = 0.5;// first level-up cost, relative to unlock cost
+
+  const Buildings = {
+    MAX_LEVEL,
+    AUTO_COLLECTOR_MIN_LEVEL,
+
+    /** Fresh state for a single building slot. */
+    createFreshBuildingState(cityId, index) {
+      return {
+        cityId,
+        index,
+        unlocked: false,
+        level: 0,
+        upgradePurchased: false,
+        autoCollector: false,
+        productionTimer: 0,
+        readyToCollect: false,
+        lifetimeIncome: 0,
+      };
+    },
+
+    getDef(cityId, index) {
+      const cityIndex = Game.Cities.data.findIndex((c) => c.id === cityId);
+      return {
+        name: Game.Cities.data[cityIndex].buildingNames[index],
+        cityIndex,
+      };
+    },
+
+    /** The underlying cost/income scaling value for a building slot — always the
+     * real formula value, even for buildings whose unlock cost is waived. Every
+     * other cost (level up, upgrade, auto collector) and the income formula scale
+     * off of this, not off the (possibly-free) unlock cost. */
+    costBasis(cityId, index) {
+      const { cityIndex } = Buildings.getDef(cityId, index);
+      return BUILDING_BASE_COST[cityIndex] * Math.pow(BUILDING_COST_GROWTH, index);
+    },
+
+    /** Cost to unlock the building (before cost-reduction discount). The very first
+     * building in the game (Green Village's Hut) is free, so a fresh save always has
+     * a way to bootstrap Sparks from zero. */
+    baseUnlockCost(cityId, index) {
+      if (cityId === 'green_village' && index === 0) return 0;
+      return Buildings.costBasis(cityId, index);
+    },
+
+    unlockCost(cityId, index) {
+      return Buildings.baseUnlockCost(cityId, index) * Game.Prestige.getCostMultiplier();
+    },
+
+    levelUpCost(building) {
+      const base = Buildings.costBasis(building.cityId, building.index) * LEVEL_UP_BASE_COST_RATIO;
+      const scaled = base * Math.pow(LEVEL_COST_GROWTH, building.level);
+      return scaled * Game.Prestige.getCostMultiplier();
+    },
+
+    upgradeCost(building) {
+      const base = Buildings.costBasis(building.cityId, building.index) * UPGRADE_COST_MULT;
+      return base * Game.Prestige.getCostMultiplier();
+    },
+
+    autoCollectorCost(building) {
+      const base = Buildings.costBasis(building.cityId, building.index) * AUTO_COLLECTOR_COST_MULT;
+      return base * Game.Prestige.getCostMultiplier();
+    },
+
+    canBuyAutoCollector(building) {
+      return building.level >= AUTO_COLLECTOR_MIN_LEVEL && building.upgradePurchased && !building.autoCollector;
+    },
+
+    /** Base income per production cycle, before global multipliers. */
+    baseIncomePerCycle(building) {
+      if (building.level <= 0) return 0;
+      const base = Buildings.costBasis(building.cityId, building.index) * INCOME_TO_COST_RATIO;
+      let income = base * Math.pow(LEVEL_INCOME_GROWTH, building.level - 1);
+      if (building.upgradePurchased) income *= UPGRADE_INCOME_MULT;
+      return income;
+    },
+
+    /** Income per cycle after all global multipliers (global income, city reward, prestige, achievements, events). */
+    incomePerCycle(building) {
+      return (
+        Buildings.baseIncomePerCycle(building) *
+        Game.Prestige.getGlobalIncomeMultiplier() *
+        Game.Events.getIncomeBuffMultiplier()
+      );
+    },
+
+    /** Seconds between production cycles, after production-speed multipliers. */
+    interval(building) {
+      const base = BASE_INTERVAL + building.index * INTERVAL_STEP;
+      let speedMult = Game.Prestige.getProductionSpeedMultiplier();
+      let effective = base / speedMult;
+      if (building.autoCollector) {
+        effective /= Game.Prestige.getAutoCollectorSpeedMultiplier();
+        effective /= Game.Events.getAutoCollectorSpeedBuffMultiplier();
+      }
+      return Math.max(0.25, effective);
+    },
+
+    /** Expected income/sec including average critical-hit value (for HUD + auto collection only). */
+    getIncomePerSec(building) {
+      if (!building.unlocked || building.level <= 0 || !building.autoCollector) return 0;
+      const perCycle = Buildings.incomePerCycle(building) * Game.Prestige.getCriticalExpectedMultiplier();
+      return perCycle / Buildings.interval(building);
+    },
+
+    // -------------------------------------------------------------------
+    // Actions
+    // -------------------------------------------------------------------
+
+    unlock(cityId, index) {
+      const building = Game.Cities.getState(cityId).buildings[index];
+      if (building.unlocked) return false;
+      const cost = Buildings.unlockCost(cityId, index);
+      if (Game.state.sparks < cost) return false;
+
+      Game.state.sparks -= cost;
+      building.unlocked = true;
+      building.level = 1;
+      building.productionTimer = 0;
+      building.readyToCollect = false;
+      Game.state.stats.buildingsPurchased++;
+      Buildings.recordPrestigeLevel(building);
+
+      Game.Audio.play('purchase');
+      Game.UI.spawnGlow(cityId, index);
+      Game.Achievements.check();
+      Game.Save.save();
+      Game.UI.renderBuildingGrid();
+      return true;
+    },
+
+    levelUp(building) {
+      if (!building.unlocked || building.level >= MAX_LEVEL) return false;
+      const cost = Buildings.levelUpCost(building);
+      if (Game.state.sparks < cost) return false;
+
+      Game.state.sparks -= cost;
+      building.level++;
+      Buildings.recordPrestigeLevel(building);
+
+      if (building.level >= MAX_LEVEL) {
+        Game.state.stats.buildingsMaxed++;
+      }
+      Game.Audio.play('upgrade');
+
+      // Rewards (Sparks, Ultimate Sparks, permanent bonuses, cosmetics) are granted
+      // exclusively through the Achievement System — see achievements.js. Leveling
+      // a building only ever increases its own production and, at level 20 with
+      // the upgrade purchased, unlocks its Auto Collector.
+      Game.Achievements.check();
+      Game.Cities.checkCompletion(building.cityId);
+      Game.Save.save();
+      Game.UI.renderBuildingGrid();
+      return true;
+    },
+
+    purchaseUpgrade(building) {
+      if (!building.unlocked || building.upgradePurchased) return false;
+      const cost = Buildings.upgradeCost(building);
+      if (Game.state.sparks < cost) return false;
+
+      Game.state.sparks -= cost;
+      building.upgradePurchased = true;
+      Game.Audio.play('upgrade');
+      Game.UI.notify(`${Buildings.getDef(building.cityId, building.index).name} upgraded: 3x income!`, 'success');
+      Game.Achievements.check();
+      Game.Save.save();
+      Game.UI.renderBuildingGrid();
+      return true;
+    },
+
+    purchaseAutoCollector(building) {
+      if (!Buildings.canBuyAutoCollector(building)) return false;
+      const cost = Buildings.autoCollectorCost(building);
+      if (Game.state.sparks < cost) return false;
+
+      Game.state.sparks -= cost;
+      building.autoCollector = true;
+      building.readyToCollect = false;
+      building.productionTimer = 0;
+      Game.Audio.play('purchase');
+      Game.UI.notify(`Auto Collector installed on ${Buildings.getDef(building.cityId, building.index).name}!`, 'success');
+      Game.Achievements.check();
+      Game.Save.save();
+      Game.UI.renderBuildingGrid();
+      return true;
+    },
+
+    /** Manual collection when the building is ready (auto-collected buildings don't need this). */
+    collect(building) {
+      if (!building.readyToCollect) return false;
+      const gained = Buildings.awardIncome(building, true);
+      building.readyToCollect = false;
+      building.productionTimer = 0;
+      Game.state.stats.totalClicks++;
+      Game.Audio.play('collect');
+      Game.UI.spawnFloatingText(building, gained);
+      Game.UI.renderBuildingCard(building);
+      return true;
+    },
+
+    /** Applies a production payout to sparks/lifetime stats, honoring crit + click power. */
+    awardIncome(building, isManual) {
+      let amount = Buildings.incomePerCycle(building);
+      let isCrit = false;
+
+      if (Math.random() < Game.Prestige.getCriticalChance()) {
+        amount *= Game.Prestige.getCriticalMultiplier();
+        isCrit = true;
+      }
+      if (isManual) {
+        amount *= Game.Prestige.getClickPowerMultiplier();
+      }
+
+      Game.state.sparks += amount;
+      Game.state.lifetimeSparks += amount;
+      building.lifetimeIncome += amount;
+      if (Game.state.sparks > Game.state.stats.highestSparks) Game.state.stats.highestSparks = Game.state.sparks;
+
+      return { amount, isCrit };
+    },
+
+    /** Keeps a permanent (never reset by prestige) record of the highest level ever reached. */
+    recordPrestigeLevel(building) {
+      const records = Game.state.buildingRecords[building.cityId];
+      if (building.level > records[building.index]) {
+        records[building.index] = building.level;
+      }
+    },
+
+    getPrestigeLevel(building) {
+      return Game.state.buildingRecords[building.cityId][building.index];
+    },
+
+    // -------------------------------------------------------------------
+    // Main-loop tick: advances timers, resolves auto-collection.
+    // -------------------------------------------------------------------
+    tick(dt) {
+      Game.Cities.data.forEach((cityDef) => {
+        const cityState = Game.state.cities[cityDef.id];
+        if (!cityState.unlocked) return;
+
+        cityState.buildings.forEach((building) => {
+          if (!building.unlocked || building.level <= 0) return;
+
+          const interval = Buildings.interval(building);
+
+          if (building.autoCollector) {
+            building.productionTimer += dt;
+            // Support large dt (offline/backgrounded tab) without an infinite loop.
+            let cycles = Math.floor(building.productionTimer / interval);
+            if (cycles > 0) {
+              cycles = Math.min(cycles, 100000);
+              building.productionTimer -= cycles * interval;
+              for (let i = 0; i < cycles; i++) {
+                Buildings.awardIncome(building, false);
+              }
+            }
+          } else if (!building.readyToCollect) {
+            building.productionTimer += dt;
+            if (building.productionTimer >= interval) {
+              building.productionTimer = interval;
+              building.readyToCollect = true;
+            }
+          }
+        });
+      });
+    },
+  };
+
+  window.Game.Buildings = Buildings;
+})();
+
+</script>
+  <script>
+/**
+ * prestige.js
+ * Prestige progression (Sparks -> Ultimate Sparks) and the Prestige Shop,
+ * plus every global-multiplier getter other modules read from.
+ */
+(function () {
+  'use strict';
+
+  const BASE_REQUIRED_LIFETIME = 1e6;
+  const REQUIRED_LIFETIME_GROWTH = 4;
+  const BASE_CRIT_CHANCE = 0.02;
+  const CRIT_MULTIPLIER = 5;
+  const OFFLINE_BASE_EFFICIENCY = 0.5;
+  const UPGRADE_COST_GROWTH = 1.25;
+
+  // Every prestige-shop upgrade. `amount` is the per-level effect (interpreted per upgrade below).
+  const SHOP_UPGRADES = [
+    { id: 'globalIncome', name: 'Global Income', icon: '⚡', desc: '+2% income from all buildings per level.', baseCost: 5, amount: 0.02, maxLevel: 50 },
+    { id: 'productionSpeed', name: 'Production Speed', icon: '⏱️', desc: '+2% production speed per level.', baseCost: 5, amount: 0.02, maxLevel: 50 },
+    { id: 'offlineEarnings', name: 'Offline Earnings', icon: '☕', desc: '+5% offline earning efficiency per level.', baseCost: 8, amount: 0.05, maxLevel: 20 },
+    { id: 'costReduction', name: 'Cost Reduction', icon: '💰', desc: '-1% building/upgrade costs per level.', baseCost: 10, amount: 0.01, maxLevel: 30 },
+    { id: 'autoCollectorSpeed', name: 'Auto Collector Speed', icon: '🤖', desc: '+3% auto collector speed per level.', baseCost: 8, amount: 0.03, maxLevel: 30 },
+    { id: 'criticalChance', name: 'Critical Income', icon: '💥', desc: '+0.5% chance for 5x income per level.', baseCost: 12, amount: 0.005, maxLevel: 20 },
+    { id: 'clickPower', name: 'Click Power', icon: '👆', desc: '+5% income from manual collection per level.', baseCost: 6, amount: 0.05, maxLevel: 20 },
+    { id: 'cityIncome', name: 'City Income', icon: '🏙️', desc: '+1% income per level, per unlocked city.', baseCost: 15, amount: 0.01, maxLevel: 20 },
+    { id: 'ultimateGain', name: 'Ultimate Spark Gain', icon: '⭐', desc: '+4% Ultimate Sparks earned per level.', baseCost: 20, amount: 0.04, maxLevel: 25 },
+  ];
+
+  const Prestige = {
+    SHOP_UPGRADES,
+
+    createFreshUpgradesState() {
+      const map = {};
+      SHOP_UPGRADES.forEach((u) => (map[u.id] = 0));
+      return map;
+    },
+
+    getUpgradeLevel(id) {
+      return Game.state.prestigeUpgrades[id] || 0;
+    },
+
+    getUpgradeDef(id) {
+      return SHOP_UPGRADES.find((u) => u.id === id);
+    },
+
+    upgradeCost(id) {
+      const def = Prestige.getUpgradeDef(id);
+      const level = Prestige.getUpgradeLevel(id);
+      return Math.ceil(def.baseCost * Math.pow(UPGRADE_COST_GROWTH, level));
+    },
+
+    purchaseUpgrade(id) {
+      const def = Prestige.getUpgradeDef(id);
+      const level = Prestige.getUpgradeLevel(id);
+      if (level >= def.maxLevel) return false;
+      const cost = Prestige.upgradeCost(id);
+      if (Game.state.ultimateSparks < cost) return false;
+
+      Game.state.ultimateSparks -= cost;
+      Game.state.prestigeUpgrades[id] = level + 1;
+      Game.Audio.play('upgrade');
+      Game.UI.renderPrestigeShop();
+      Game.UI.refreshHUD();
+      Game.Save.save();
+      return true;
+    },
+
+    // ---------------------------------------------------------------
+    // Multiplier getters — consumed by buildings.js / cities.js / offline.js
+    // ---------------------------------------------------------------
+
+    getGlobalIncomeMultiplier() {
+      let mult = 1;
+      mult *= Game.Cities.getRewardMultiplier('globalIncomeMult');
+      mult *= 1 + Prestige.getUpgradeLevel('globalIncome') * Prestige.getUpgradeDef('globalIncome').amount;
+      mult *= Game.Achievements.getBonusMultiplier();
+      mult *= Prestige.getCityIncomeBonusMultiplier();
+      return mult;
+    },
+
+    getProductionSpeedMultiplier() {
+      let mult = 1;
+      mult *= Game.Cities.getRewardMultiplier('productionSpeedMult');
+      mult *= 1 + Prestige.getUpgradeLevel('productionSpeed') * Prestige.getUpgradeDef('productionSpeed').amount;
+      return mult;
+    },
+
+    getOfflineEarningsMultiplier() {
+      let mult = OFFLINE_BASE_EFFICIENCY;
+      mult *= Game.Cities.getRewardMultiplier('offlineIncomeMult');
+      mult *= 1 + Prestige.getUpgradeLevel('offlineEarnings') * Prestige.getUpgradeDef('offlineEarnings').amount;
+      return mult;
+    },
+
+    getCostMultiplier() {
+      const level = Prestige.getUpgradeLevel('costReduction');
+      const amount = Prestige.getUpgradeDef('costReduction').amount;
+      return Math.max(0.4, 1 - level * amount);
+    },
+
+    getAutoCollectorSpeedMultiplier() {
+      let mult = 1;
+      mult *= Game.Cities.getRewardMultiplier('autoCollectorSpeedMult');
+      mult *= 1 + Prestige.getUpgradeLevel('autoCollectorSpeed') * Prestige.getUpgradeDef('autoCollectorSpeed').amount;
+      return mult;
+    },
+
+    getCriticalChance() {
+      const level = Prestige.getUpgradeLevel('criticalChance');
+      const amount = Prestige.getUpgradeDef('criticalChance').amount;
+      return Math.min(0.5, BASE_CRIT_CHANCE + level * amount);
+    },
+
+    getCriticalMultiplier() {
+      return CRIT_MULTIPLIER;
+    },
+
+    getCriticalExpectedMultiplier() {
+      const chance = Prestige.getCriticalChance();
+      return 1 - chance + chance * CRIT_MULTIPLIER;
+    },
+
+    getClickPowerMultiplier() {
+      const level = Prestige.getUpgradeLevel('clickPower');
+      const amount = Prestige.getUpgradeDef('clickPower').amount;
+      return (1 + level * amount) * Game.Achievements.getClickBonusMultiplier();
+    },
+
+    getCityIncomeBonusMultiplier() {
+      const level = Prestige.getUpgradeLevel('cityIncome');
+      const amount = Prestige.getUpgradeDef('cityIncome').amount;
+      const unlockedCities = Game.Cities.data.filter((c) => Game.state.cities[c.id].unlocked).length;
+      return 1 + level * amount * unlockedCities;
+    },
+
+    getUltimateGainMultiplier() {
+      let mult = 1;
+      mult *= Game.Cities.getRewardMultiplier('ultimateSparkGainMult');
+      mult *= 1 + Prestige.getUpgradeLevel('ultimateGain') * Prestige.getUpgradeDef('ultimateGain').amount;
+      return mult;
+    },
+
+    // ---------------------------------------------------------------
+    // Prestige itself
+    // ---------------------------------------------------------------
+
+    requiredLifetime() {
+      return BASE_REQUIRED_LIFETIME * Math.pow(REQUIRED_LIFETIME_GROWTH, Game.state.prestigeCount);
+    },
+
+    isAvailable() {
+      return Game.state.lifetimeSparks >= Prestige.requiredLifetime();
+    },
+
+    previewGain() {
+      if (!Prestige.isAvailable()) return 0;
+      const raw = Math.floor(Math.cbrt(Game.state.lifetimeSparks / BASE_REQUIRED_LIFETIME));
+      return Math.max(1, Math.floor(raw * Prestige.getUltimateGainMultiplier()));
+    },
+
+    doPrestige() {
+      if (!Prestige.isAvailable()) return false;
+      const gain = Prestige.previewGain();
+
+      Game.state.ultimateSparks += gain;
+      Game.state.prestigeCount++;
+      Game.state.sparks = 0;
+      Game.Cities.resetForPrestige();
+
+      Game.Audio.play('prestige');
+      Game.UI.notify(`Prestiged! +${Game.Utils.formatNumber(gain)} ⭐ Ultimate Sparks`, 'success');
+      Game.UI.spawnConfetti();
+      Game.Achievements.check();
+      Game.UI.renderCityTabs();
+      Game.UI.renderScene();
+      Game.UI.renderBuildingGrid();
+      Game.UI.refreshHUD();
+      Game.Save.save();
+      return true;
+    },
+  };
+
+  window.Game.Prestige = Prestige;
+})();
+
+</script>
+  <script>
+/**
+ * achievements.js
+ * Achievement definitions + checking. Each unlocked achievement grants a
+ * small permanent global-income bonus, and achievements are never reset
+ * by prestige.
+ */
+(function () {
+  'use strict';
+
+  const ACHIEVEMENT_LIST = [
+    { id: 'reach_1k', name: 'First Light', icon: '⚡', desc: 'Reach 1,000 lifetime Sparks.', bonus: 0.01, sparksReward: 50, test: (s) => s.lifetimeSparks >= 1e3 },
+    { id: 'reach_1m', name: 'Spark Millionaire', icon: '💰', desc: 'Reach 1,000,000 lifetime Sparks.', bonus: 0.01, sparksReward: 5000, test: (s) => s.lifetimeSparks >= 1e6 },
+    { id: 'reach_1b', name: 'Spark Billionaire', icon: '💎', desc: 'Reach 1,000,000,000 lifetime Sparks.', bonus: 0.01, sparksReward: 500000, test: (s) => s.lifetimeSparks >= 1e9 },
+    { id: 'reach_1t', name: 'Spark Titan', icon: '🌟', desc: 'Reach 1,000,000,000,000 lifetime Sparks.', bonus: 0.02, ultimateSparksReward: 2, test: (s) => s.lifetimeSparks >= 1e12 },
+    { id: 'unlock_river_town', name: 'Down the River', icon: '🌇', desc: 'Unlock River Town.', bonus: 0.01, test: (s) => s.cities.river_town.unlocked },
+    { id: 'unlock_metro_city', name: 'Big City Lights', icon: '🌃', desc: 'Unlock Metro City.', bonus: 0.01, test: (s) => s.cities.metro_city.unlocked },
+    { id: 'unlock_capital_city', name: 'Seat of Power', icon: '🏛️', desc: 'Unlock Capital City.', bonus: 0.01, test: (s) => s.cities.capital_city.unlocked },
+    { id: 'unlock_future_city', name: 'Tomorrow, Today', icon: '🛰️', desc: 'Unlock Future City.', bonus: 0.02, ultimateSparksReward: 1, test: (s) => s.cities.future_city.unlocked },
+    { id: 'first_building', name: 'Groundbreaking', icon: '🧱', desc: 'Purchase your first building.', bonus: 0.01, test: (s) => s.stats.buildingsPurchased >= 1 },
+    { id: 'ten_buildings', name: 'Urban Planner', icon: '🏗️', desc: 'Purchase 10 buildings.', bonus: 0.01, test: (s) => s.stats.buildingsPurchased >= 10 },
+    { id: 'all_buildings', name: 'Full Occupancy', icon: '🏘️', desc: 'Purchase all 30 buildings.', bonus: 0.02, clickBonus: 0.05, test: (s) => s.stats.buildingsPurchased >= 30 },
+    { id: 'reach_level_25', name: 'Rising Star', icon: '🌱', desc: 'Reach Level 25 on any building.', bonus: 0.01, sparksReward: 1000, test: (s) => Object.values(s.buildingRecords).some((arr) => arr.some((lvl) => lvl >= 25)) },
+    { id: 'reach_level_50', name: 'Halfway Titan', icon: '🏔️', desc: 'Reach Level 50 on any building.', bonus: 0.02, ultimateSparksReward: 1, test: (s) => Object.values(s.buildingRecords).some((arr) => arr.some((lvl) => lvl >= 50)) },
+    { id: 'max_building', name: 'Fully Powered', icon: '🔋', desc: 'Max a building to level 100.', bonus: 0.01, clickBonus: 0.05, test: (s) => s.stats.buildingsMaxed >= 1 },
+    { id: 'max_five_buildings', name: 'Powerhouse', icon: '🔌', desc: 'Max 5 buildings.', bonus: 0.01, clickBonus: 0.05, test: (s) => s.stats.buildingsMaxed >= 5 },
+    { id: 'max_city', name: 'City Perfected', icon: '🏆', desc: 'Complete any city.', bonus: 0.02, ultimateSparksReward: 1, test: (s) => s.stats.citiesCompletedCount >= 1 },
+    { id: 'complete_all_cities', name: 'Light Across the Land', icon: '🌍', desc: 'Complete all 5 cities.', bonus: 0.05, ultimateSparksReward: 10, cosmetic: 'Light Bringer', test: (s) => s.stats.citiesCompletedCount >= 5 },
+    { id: 'first_auto_collector', name: 'Automation Begins', icon: '🤖', desc: 'Install your first Auto Collector.', bonus: 0.01, test: (s) => Object.values(s.cities).some((c) => c.buildings.some((b) => b.autoCollector)) },
+    { id: 'first_prestige', name: 'Reborn in Light', icon: '🔁', desc: 'Prestige for the first time.', bonus: 0.02, ultimateSparksReward: 1, test: (s) => s.prestigeCount >= 1 },
+    { id: 'ten_prestiges', name: 'Cycle Runner', icon: '♻️', desc: 'Prestige 10 times.', bonus: 0.02, ultimateSparksReward: 5, test: (s) => s.prestigeCount >= 10 },
+    { id: 'hundred_prestiges', name: 'Eternal Spark', icon: '♾️', desc: 'Prestige 100 times.', bonus: 0.05, ultimateSparksReward: 25, cosmetic: 'Eternal Spark', test: (s) => s.prestigeCount >= 100 },
+    { id: 'busy_hands', name: 'Busy Hands', icon: '👆', desc: 'Manually collect 500 times.', bonus: 0.01, clickBonus: 0.05, test: (s) => s.stats.totalClicks >= 500 },
+    { id: 'tireless_hands', name: 'Tireless Hands', icon: '✋', desc: 'Manually collect 5,000 times.', bonus: 0.01, clickBonus: 0.1, test: (s) => s.stats.totalClicks >= 5000 },
+    { id: 'ultimate_hoarder', name: 'Ultimate Hoarder', icon: '⭐', desc: 'Hold 100 Ultimate Sparks at once.', bonus: 0.02, cosmetic: 'Hoarder', test: (s) => s.ultimateSparks >= 100 },
+  ];
+
+  const Achievements = {
+    LIST: ACHIEVEMENT_LIST,
+
+    createFreshState() {
+      return { unlocked: {} };
+    },
+
+    isUnlocked(id) {
+      return !!Game.state.achievements.unlocked[id];
+    },
+
+    /** Re-evaluates every achievement predicate; unlocks any newly-earned ones and
+     * grants their one-time rewards (Sparks, Ultimate Sparks, cosmetic titles). */
+    check() {
+      let anyNew = false;
+      ACHIEVEMENT_LIST.forEach((def) => {
+        if (Achievements.isUnlocked(def.id)) return;
+        if (!def.test(Game.state)) return;
+
+        Game.state.achievements.unlocked[def.id] = true;
+        anyNew = true;
+
+        const rewardParts = [];
+        if (def.sparksReward) {
+          Game.state.sparks += def.sparksReward;
+          Game.state.lifetimeSparks += def.sparksReward;
+          rewardParts.push(`+${Game.Utils.formatNumber(def.sparksReward)} ⚡`);
+        }
+        if (def.ultimateSparksReward) {
+          Game.state.ultimateSparks += def.ultimateSparksReward;
+          rewardParts.push(`+${def.ultimateSparksReward} ⭐`);
+        }
+        if (def.cosmetic) rewardParts.push(`title "${def.cosmetic}"`);
+
+        Game.Audio.play('achievement');
+        const rewardText = rewardParts.length ? ` (${rewardParts.join(', ')})` : '';
+        Game.UI.notify(`Achievement unlocked: ${def.name}${rewardText}`, 'achievement');
+      });
+      if (anyNew) {
+        Game.UI.renderAchievements();
+        Game.UI.refreshHUD();
+      }
+    },
+
+    /** Combined permanent income bonus from all unlocked achievements. */
+    getBonusMultiplier() {
+      let mult = 1;
+      ACHIEVEMENT_LIST.forEach((def) => {
+        if (Achievements.isUnlocked(def.id) && def.bonus) mult += def.bonus;
+      });
+      return mult;
+    },
+
+    /** Combined permanent click-power bonus from unlocked achievements. */
+    getClickBonusMultiplier() {
+      let mult = 1;
+      ACHIEVEMENT_LIST.forEach((def) => {
+        if (Achievements.isUnlocked(def.id) && def.clickBonus) mult += def.clickBonus;
+      });
+      return mult;
+    },
+
+    /** The most prestigious cosmetic title the player has unlocked via achievements, or null. */
+    getCosmeticTitle() {
+      const achievementTitles = ACHIEVEMENT_LIST.filter((def) => def.cosmetic && Achievements.isUnlocked(def.id)).map(
+        (def) => def.cosmetic
+      );
+      return achievementTitles.length ? achievementTitles[achievementTitles.length - 1] : null;
+    },
+
+    unlockedCount() {
+      return ACHIEVEMENT_LIST.filter((def) => Achievements.isUnlocked(def.id)).length;
+    },
+  };
+
+  window.Game.Achievements = Achievements;
+})();
+
+</script>
+  <script>
+/**
+ * audio.js
+ * Lightweight WebAudio-based sound engine. All sound effects are
+ * synthesized at runtime (no external audio files), so the game has
+ * zero external asset dependencies. Background music is a simple
+ * generated ambient pad loop.
+ */
+(function () {
+  'use strict';
+
+  let ctx = null;
+  let musicNodes = null;
+  let musicTimer = null;
+
+  function ensureContext() {
+    if (!ctx) {
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      if (!AudioCtx) return null;
+      ctx = new AudioCtx();
+    }
+    if (ctx.state === 'suspended') ctx.resume();
+    return ctx;
+  }
+
+  // Short synthesized tones per sound effect: [frequency(Hz), duration(s), type, gain]
+  const SFX = {
+    click: [660, 0.06, 'sine', 0.15],
+    purchase: [440, 0.12, 'triangle', 0.2],
+    upgrade: [520, 0.15, 'square', 0.15],
+    collect: [880, 0.08, 'sine', 0.18],
+    unlock: [330, 0.3, 'sawtooth', 0.15],
+    prestige: [220, 0.5, 'triangle', 0.25],
+    achievement: [660, 0.25, 'square', 0.2],
+  };
+
+  const Audio = {
+    init() {
+      // AudioContext must be created/resumed from a user gesture on most browsers.
+      const resume = () => {
+        ensureContext();
+        document.removeEventListener('pointerdown', resume);
+      };
+      document.addEventListener('pointerdown', resume);
+    },
+
+    play(name) {
+      if (!Game.state.settings.sound) return;
+      const spec = SFX[name];
+      if (!spec) return;
+      const audioCtx = ensureContext();
+      if (!audioCtx) return;
+
+      const [freq, duration, type, gain] = spec;
+      const now = audioCtx.currentTime;
+
+      const osc = audioCtx.createOscillator();
+      const gainNode = audioCtx.createGain();
+      osc.type = type;
+      osc.frequency.setValueAtTime(freq, now);
+      // A short pitch glide makes "collect"/"unlock"/"prestige" feel more alive.
+      osc.frequency.exponentialRampToValueAtTime(freq * (name === 'collect' ? 1.5 : 1.15), now + duration);
+
+      gainNode.gain.setValueAtTime(gain, now);
+      gainNode.gain.exponentialRampToValueAtTime(0.001, now + duration);
+
+      osc.connect(gainNode);
+      gainNode.connect(audioCtx.destination);
+      osc.start(now);
+      osc.stop(now + duration + 0.02);
+    },
+
+    /** Generates one slow ambient pad chord and schedules the next; loops while music is enabled. */
+    startMusic() {
+      const audioCtx = ensureContext();
+      if (!audioCtx || musicTimer) return;
+
+      const chordFrequencies = [130.81, 164.81, 196.0, 246.94]; // soft C major-ish pad
+      let chordIndex = 0;
+
+      const playChord = () => {
+        if (!Game.state.settings.music) return;
+        const freq = chordFrequencies[chordIndex % chordFrequencies.length];
+        chordIndex++;
+
+        const now = audioCtx.currentTime;
+        const osc = audioCtx.createOscillator();
+        const gainNode = audioCtx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(freq, now);
+        gainNode.gain.setValueAtTime(0, now);
+        gainNode.gain.linearRampToValueAtTime(0.05, now + 1.5);
+        gainNode.gain.linearRampToValueAtTime(0, now + 4.5);
+        osc.connect(gainNode);
+        gainNode.connect(audioCtx.destination);
+        osc.start(now);
+        osc.stop(now + 4.6);
+
+        musicTimer = setTimeout(playChord, 3800);
+      };
+      playChord();
+    },
+
+    stopMusic() {
+      if (musicTimer) {
+        clearTimeout(musicTimer);
+        musicTimer = null;
+      }
+    },
+
+    setMusicEnabled(enabled) {
+      Game.state.settings.music = enabled;
+      if (enabled) {
+        ensureContext();
+        Audio.startMusic();
+      } else {
+        Audio.stopMusic();
+      }
+    },
+  };
+
+  window.Game.Audio = Audio;
+})();
+
+</script>
+  <script>
+/**
+ * settings.js
+ * Player-facing settings: theme, audio toggles, animation/UI toggles,
+ * and the reset/export/import actions (delegated to save.js).
+ */
+(function () {
+  'use strict';
+
+  const Settings = {
+    createFreshState() {
+      return {
+        theme: 'dark',
+        sound: true,
+        music: false,
+        animations: true,
+        floatingNumbers: true,
+        notifications: true,
+      };
+    },
+
+    /** Applies current settings to the DOM (theme class, etc.) — call after load and after any change. */
+    apply() {
+      const s = Game.state.settings;
+      document.body.classList.toggle('theme-light', s.theme === 'light');
+      document.body.classList.toggle('theme-dark', s.theme !== 'light');
+      document.body.classList.toggle('no-animations', !s.animations);
+
+      document.querySelectorAll('#setting-theme .seg-btn').forEach((btn) => {
+        btn.classList.toggle('active', btn.dataset.value === s.theme);
+      });
+      document.getElementById('setting-sound').checked = s.sound;
+      document.getElementById('setting-music').checked = s.music;
+      document.getElementById('setting-animations').checked = s.animations;
+      document.getElementById('setting-floating').checked = s.floatingNumbers;
+      document.getElementById('setting-notifications').checked = s.notifications;
+    },
+
+    setTheme(theme) {
+      Game.state.settings.theme = theme;
+      Settings.apply();
+      Game.Save.save();
+    },
+
+    toggle(key, value) {
+      Game.state.settings[key] = value;
+      if (key === 'music') Game.Audio.setMusicEnabled(value);
+      Settings.apply();
+      Game.Save.save();
+    },
+
+    bindEvents() {
+      document.getElementById('setting-theme').addEventListener('click', (e) => {
+        const btn = e.target.closest('.seg-btn');
+        if (btn) Settings.setTheme(btn.dataset.value);
+      });
+      document.getElementById('setting-sound').addEventListener('change', (e) => Settings.toggle('sound', e.target.checked));
+      document.getElementById('setting-music').addEventListener('change', (e) => Settings.toggle('music', e.target.checked));
+      document.getElementById('setting-animations').addEventListener('change', (e) => Settings.toggle('animations', e.target.checked));
+      document.getElementById('setting-floating').addEventListener('change', (e) => Settings.toggle('floatingNumbers', e.target.checked));
+      document.getElementById('setting-notifications').addEventListener('change', (e) => Settings.toggle('notifications', e.target.checked));
+
+      document.getElementById('btn-export-save').addEventListener('click', () => Game.Save.exportSave());
+      document.getElementById('btn-import-save').addEventListener('click', () => document.getElementById('import-file-input').click());
+      document.getElementById('import-file-input').addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (file) Game.Save.importSave(file);
+        e.target.value = '';
+      });
+      document.getElementById('btn-reset-save').addEventListener('click', () => {
+        if (confirm('Reset ALL progress, including Ultimate Sparks and achievements? This cannot be undone.')) {
+          Game.Save.resetSave();
+        }
+      });
+    },
+  };
+
+  window.Game.Settings = Settings;
+})();
+
+</script>
+  <script>
+/**
+ * save.js
+ * LocalStorage persistence: autosave, save-on-action, export/import,
+ * and full reset. Offline-earnings timing is anchored on
+ * `state.lastActiveTimestamp`, refreshed every time we save.
+ */
+(function () {
+  'use strict';
+
+  const SAVE_KEY = 'lightCityGame_save_v1';
+  const AUTOSAVE_INTERVAL_MS = 15000;
+  const EXPECTED_KEYS = ['sparks', 'lifetimeSparks', 'ultimateSparks', 'cities', 'prestigeUpgrades'];
+
+  let autosaveTimer = null;
+  let beforeUnloadHandler = null;
+
+  const Save = {
+    save() {
+      Game.state.lastActiveTimestamp = Date.now();
+      try {
+        localStorage.setItem(SAVE_KEY, JSON.stringify(Game.state));
+      } catch (err) {
+        console.error('Light City: failed to save game.', err);
+      }
+    },
+
+    hasSave() {
+      return !!localStorage.getItem(SAVE_KEY);
+    },
+
+    /** Returns the parsed save object, or null if none/invalid. */
+    load() {
+      const raw = localStorage.getItem(SAVE_KEY);
+      if (!raw) return null;
+      try {
+        const parsed = JSON.parse(raw);
+        if (!EXPECTED_KEYS.every((key) => key in parsed)) return null;
+        return parsed;
+      } catch (err) {
+        console.error('Light City: failed to parse save.', err);
+        return null;
+      }
+    },
+
+    startAutosave() {
+      if (autosaveTimer) clearInterval(autosaveTimer);
+      autosaveTimer = setInterval(Save.save, AUTOSAVE_INTERVAL_MS);
+      if (!beforeUnloadHandler) {
+        beforeUnloadHandler = () => Save.save();
+        window.addEventListener('beforeunload', beforeUnloadHandler);
+      }
+    },
+
+    /** Stops autosave-on-exit. Must be called before any reload that should NOT
+     * persist the current in-memory state (e.g. resetSave) — otherwise the
+     * beforeunload handler re-writes the old state back to localStorage during
+     * the very reload meant to clear it. */
+    stopAutosave() {
+      if (autosaveTimer) {
+        clearInterval(autosaveTimer);
+        autosaveTimer = null;
+      }
+      if (beforeUnloadHandler) {
+        window.removeEventListener('beforeunload', beforeUnloadHandler);
+        beforeUnloadHandler = null;
+      }
+    },
+
+    exportSave() {
+      Save.save();
+      const blob = new Blob([JSON.stringify(Game.state, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `light-city-save-${new Date().toISOString().slice(0, 10)}.json`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      Game.UI.notify('Save exported.', 'success');
+    },
+
+    importSave(file) {
+      const reader = new FileReader();
+      reader.onload = () => {
+        try {
+          const parsed = JSON.parse(reader.result);
+          if (!EXPECTED_KEYS.every((key) => key in parsed)) {
+            throw new Error('Not a valid Light City save file.');
+          }
+          Object.assign(Game.state, parsed);
+          Save.save();
+          Game.UI.fullRefresh();
+          Game.UI.notify('Save imported successfully.', 'success');
+        } catch (err) {
+          Game.UI.notify('Import failed: invalid save file.', 'error');
+          console.error('Light City: import failed.', err);
+        }
+      };
+      reader.readAsText(file);
+    },
+
+    resetSave() {
+      Save.stopAutosave();
+      localStorage.removeItem(SAVE_KEY);
+      window.location.reload();
+    },
+  };
+
+  window.Game.Save = Save;
+})();
+
+</script>
+  <script>
+/**
+ * offline.js
+ * Calculates and awards offline earnings based on elapsed real time
+ * since the last save, then shows a "Welcome Back" popup.
+ */
+(function () {
+  'use strict';
+
+  const MAX_OFFLINE_SECONDS = 24 * 60 * 60; // cap offline earnings at 24 real hours
+  const MIN_OFFLINE_SECONDS_TO_SHOW = 60; // don't bother popping up for quick refreshes
+
+  const Offline = {
+    /** Call once, right after a save is loaded on startup. */
+    resolveOnLoad() {
+      const last = Game.state.lastActiveTimestamp;
+      if (!last) return;
+
+      const elapsedSeconds = Math.max(0, (Date.now() - last) / 1000);
+      if (elapsedSeconds < MIN_OFFLINE_SECONDS_TO_SHOW) return;
+
+      const cappedSeconds = Math.min(elapsedSeconds, MAX_OFFLINE_SECONDS);
+      const incomePerSec = Game.Cities.totalIncomePerSec();
+      const offlineMultiplier = Game.Prestige.getOfflineEarningsMultiplier();
+      const earned = incomePerSec * cappedSeconds * offlineMultiplier;
+
+      if (earned <= 0) return;
+
+      Game.state.sparks += earned;
+      Game.state.lifetimeSparks += earned;
+      Game.state.stats.offlineEarningsTotal += earned;
+
+      Offline.showPopup(cappedSeconds, earned, offlineMultiplier);
+    },
+
+    showPopup(seconds, earned, offlineMultiplier) {
+      document.getElementById('offline-time-away').textContent = `You were away for ${Game.Utils.formatDuration(seconds)}.`;
+      document.getElementById('offline-earned-amount').textContent = Game.Utils.formatNumber(earned);
+      document.getElementById('offline-multiplier').textContent = `Bonus Multiplier: ×${offlineMultiplier.toFixed(2)} (offline efficiency, includes Prestige + City + Achievement bonuses)`;
+      Game.UI.openModal('modal-offline');
+    },
+  };
+
+  window.Game.Offline = Offline;
+})();
+
+</script>
+  <script>
+/**
+ * events.js
+ * Random Bonus Events: periodically spawns a clickable event orb that
+ * grants a temporary buff (income, production, auto collector speed) or
+ * an instant reward. Also hosts the generic "active buff" system that
+ * buildings.js and prestige.js read multipliers from — Daily Rewards
+ * boosters plug into the same buff list.
+ */
+(function () {
+  'use strict';
+
+  const MIN_SPAWN_SECONDS = 90;
+  const MAX_SPAWN_SECONDS = 240;
+  const ORB_LIFETIME_SECONDS = 14; // how long an unclaimed orb stays before vanishing
+
+  const EVENT_DEFS = [
+    {
+      id: 'sparkStorm',
+      name: 'Spark Storm',
+      icon: '🌩️',
+      desc: '10× income for 30 seconds!',
+      weight: 3,
+      apply() {
+        Events.addBuff({ type: 'incomeMult', value: 10, seconds: 30, label: 'Spark Storm', icon: '🌩️' });
+      },
+    },
+    {
+      id: 'goldenSpark',
+      name: 'Golden Spark',
+      icon: '✨',
+      desc: 'An instant windfall of Sparks!',
+      weight: 3,
+      apply() {
+        const reward = Math.max(50, Game.Cities.totalIncomePerSec() * 45);
+        Game.state.sparks += reward;
+        Game.state.lifetimeSparks += reward;
+        Game.UI.notify(`✨ Golden Spark! +${Game.Utils.formatNumber(reward)} ⚡`, 'success');
+      },
+    },
+    {
+      id: 'luckyDelivery',
+      name: 'Lucky Delivery',
+      icon: '🚚',
+      desc: 'A free building level!',
+      weight: 2,
+      apply() {
+        const candidates = [];
+        Game.Cities.data.forEach((def) => {
+          const cityState = Game.state.cities[def.id];
+          if (!cityState.unlocked) return;
+          cityState.buildings.forEach((b) => {
+            if (b.unlocked && b.level < Game.Buildings.MAX_LEVEL) candidates.push(b);
+          });
+        });
+        if (candidates.length === 0) {
+          const reward = Math.max(20, Game.Cities.totalIncomePerSec() * 20);
+          Game.state.sparks += reward;
+          Game.state.lifetimeSparks += reward;
+          Game.UI.notify(`🚚 Lucky Delivery! +${Game.Utils.formatNumber(reward)} ⚡`, 'success');
+          return;
+        }
+        const building = candidates[Math.floor(Math.random() * candidates.length)];
+        building.level++;
+        Game.Buildings.recordPrestigeLevel(building);
+        Game.Cities.checkCompletion(building.cityId);
+        Game.UI.notify(
+          `🚚 Lucky Delivery! ${Game.Buildings.getDef(building.cityId, building.index).name} got a free level!`,
+          'success'
+        );
+        Game.UI.spawnGlow(building.cityId, building.index);
+        Game.UI.renderBuildingGrid();
+      },
+    },
+    {
+      id: 'productionBoost',
+      name: 'Production Boost',
+      icon: '⚡',
+      desc: '+100% production for 60 seconds!',
+      weight: 3,
+      apply() {
+        Events.addBuff({ type: 'incomeMult', value: 2, seconds: 60, label: 'Production Boost', icon: '⚡' });
+      },
+    },
+    {
+      id: 'autoOverdrive',
+      name: 'Auto Overdrive',
+      icon: '🤖',
+      desc: '2× Auto Collector speed for 45 seconds!',
+      weight: 2,
+      apply() {
+        Events.addBuff({ type: 'autoSpeedMult', value: 2, seconds: 45, label: 'Auto Overdrive', icon: '🤖' });
+      },
+    },
+  ];
+
+  function pickWeighted() {
+    const totalWeight = EVENT_DEFS.reduce((sum, e) => sum + e.weight, 0);
+    let roll = Math.random() * totalWeight;
+    for (const def of EVENT_DEFS) {
+      roll -= def.weight;
+      if (roll <= 0) return def;
+    }
+    return EVENT_DEFS[0];
+  }
+
+  function randomSpawnDelay() {
+    return MIN_SPAWN_SECONDS + Math.random() * (MAX_SPAWN_SECONDS - MIN_SPAWN_SECONDS);
+  }
+
+  const Events = {
+    DEFS: EVENT_DEFS,
+
+    createFreshState() {
+      return {
+        activeBuffs: [],
+        pendingOrb: null, // { id, timeLeft }
+        nextSpawnIn: randomSpawnDelay(),
+      };
+    },
+
+    /** Adds a temporary multiplicative buff. Used by event orbs and Daily Reward boosters alike. */
+    addBuff({ type, value, seconds, label, icon }) {
+      Game.state.events.activeBuffs.push({ type, value, seconds, timeLeft: seconds, label, icon });
+      Game.UI.notify(`${icon || '⏳'} ${label} activated!`, 'success');
+      Game.UI.renderBuildingGrid();
+    },
+
+    getIncomeBuffMultiplier() {
+      return Game.state.events.activeBuffs
+        .filter((b) => b.type === 'incomeMult')
+        .reduce((mult, b) => mult * b.value, 1);
+    },
+
+    getAutoCollectorSpeedBuffMultiplier() {
+      return Game.state.events.activeBuffs
+        .filter((b) => b.type === 'autoSpeedMult')
+        .reduce((mult, b) => mult * b.value, 1);
+    },
+
+    hasActiveBuffs() {
+      return Game.state.events.activeBuffs.length > 0;
+    },
+
+    /** Player clicked the floating orb — apply its effect and clear it. */
+    claimOrb() {
+      const pending = Game.state.events.pendingOrb;
+      if (!pending) return;
+      const def = EVENT_DEFS.find((e) => e.id === pending.id);
+      Game.state.events.pendingOrb = null;
+      Game.state.events.nextSpawnIn = randomSpawnDelay();
+      if (!def) return;
+      Game.Audio.play('achievement');
+      def.apply();
+      Game.UI.renderEventOrb();
+      Game.Save.save();
+    },
+
+    /** Called every animation frame from the main loop. */
+    tick(dt) {
+      const events = Game.state.events;
+
+      events.activeBuffs.forEach((b) => (b.timeLeft -= dt));
+      const before = events.activeBuffs.length;
+      events.activeBuffs = events.activeBuffs.filter((b) => b.timeLeft > 0);
+      if (events.activeBuffs.length !== before) {
+        Game.UI.renderActiveBuffsBar();
+        Game.UI.renderBuildingGrid();
+      }
+
+      if (events.pendingOrb) {
+        events.pendingOrb.timeLeft -= dt;
+        if (events.pendingOrb.timeLeft <= 0) {
+          events.pendingOrb = null;
+          events.nextSpawnIn = randomSpawnDelay();
+          Game.UI.renderEventOrb();
+        }
+        return;
+      }
+
+      // Only start spawning events once the player has some real progress.
+      if (Game.state.stats.buildingsPurchased === 0) return;
+
+      events.nextSpawnIn -= dt;
+      if (events.nextSpawnIn <= 0) {
+        const def = pickWeighted();
+        events.pendingOrb = { id: def.id, timeLeft: ORB_LIFETIME_SECONDS };
+        Game.UI.renderEventOrb();
+      }
+    },
+  };
+
+  window.Game.Events = Events;
+})();
+
+</script>
+  <script>
+/**
+ * game.js
+ * Entry point: state shape, the main requestAnimationFrame loop, and the
+ * `Game.UI` rendering/DOM layer. Loaded last so every other module
+ * (Cities, Buildings, Prestige, Achievements, Audio, Settings, Save,
+ * Offline) is already attached to the shared `Game` namespace.
+ */
+(function () {
+  'use strict';
+
+  const Cities = Game.Cities;
+  const Buildings = Game.Buildings;
+  const Prestige = Game.Prestige;
+  const Achievements = Game.Achievements;
+
+  // ===================================================================
+  // Utilities
+  // ===================================================================
+  const SUFFIXES = ['', 'K', 'M', 'B', 'T', 'Qa', 'Qi', 'Sx', 'Sp', 'Oc', 'No', 'De', 'Ud', 'Dd', 'Td', 'Qad', 'Qid', 'Sxd', 'Spd', 'Ocd', 'Nod', 'Vg'];
+
+  const Utils = {
+    formatNumber(num) {
+      if (num === null || num === undefined || isNaN(num)) return '0';
+      const sign = num < 0 ? '-' : '';
+      num = Math.abs(num);
+      if (num < 1) return sign + num.toFixed(2);
+      // Keep decimal precision below 1000 so small per-level income gains (common
+      // early game, e.g. 1.01 -> 1.14) are actually visible instead of both flooring
+      // to the same integer and looking like the level-up had no effect.
+      if (num < 100) return sign + num.toFixed(2);
+      if (num < 1000) return sign + num.toFixed(1);
+
+      const tier = Math.floor(Math.log10(num) / 3);
+      if (tier >= SUFFIXES.length) return sign + num.toExponential(2);
+
+      const scaled = num / Math.pow(1000, tier);
+      return sign + scaled.toFixed(2) + SUFFIXES[tier];
+    },
+
+    formatDuration(totalSeconds) {
+      let seconds = Math.floor(totalSeconds);
+      const days = Math.floor(seconds / 86400);
+      seconds -= days * 86400;
+      const hours = Math.floor(seconds / 3600);
+      seconds -= hours * 3600;
+      const minutes = Math.floor(seconds / 60);
+      seconds -= minutes * 60;
+
+      const parts = [];
+      if (days > 0) parts.push(days + 'd');
+      if (hours > 0) parts.push(hours + 'h');
+      if (minutes > 0 || parts.length === 0) parts.push(minutes + 'm');
+      if (days === 0 && hours === 0) parts.push(seconds + 's');
+      return parts.join(' ');
+    },
+  };
+
+  // ===================================================================
+  // Fresh state factory
+  // ===================================================================
+  function buildFreshBuildingRecords() {
+    const map = {};
+    Cities.data.forEach((def) => (map[def.id] = new Array(6).fill(0)));
+    return map;
+  }
+
+  function createFreshState() {
+    return {
+      sparks: 0,
+      lifetimeSparks: 0,
+      ultimateSparks: 0,
+      prestigeCount: 0,
+      currentCityId: 'green_village',
+      cities: Cities.createFreshCitiesMap(),
+      buildingRecords: buildFreshBuildingRecords(),
+      prestigeUpgrades: Prestige.createFreshUpgradesState(),
+      achievements: Achievements.createFreshState(),
+      events: Game.Events.createFreshState(),
+      settings: Game.Settings.createFreshState(),
+      stats: {
+        totalClicks: 0,
+        buildingsPurchased: 0,
+        buildingsMaxed: 0,
+        citiesCompletedCount: 0,
+        citiesCompletedEver: {},
+        timePlayed: 0,
+        offlineEarningsTotal: 0,
+        highestIncomePerSec: 0,
+        highestSparks: 0,
+      },
+      lastActiveTimestamp: Date.now(),
+    };
+  }
+
+  // ===================================================================
+  // UI / rendering layer
+  // ===================================================================
+  const UI = {
+    _pendingUnlockCity: null,
+
+    // ---- modal helpers -------------------------------------------------
+    openModal(id) {
+      document.getElementById(id).classList.remove('hidden');
+    },
+    closeModal(id) {
+      document.getElementById(id).classList.add('hidden');
+    },
+
+    // ---- HUD -------------------------------------------------------------
+    refreshHUD() {
+      document.getElementById('hud-sparks').textContent = Utils.formatNumber(Game.state.sparks);
+      document.getElementById('hud-sps').textContent = Utils.formatNumber(Cities.totalIncomePerSec());
+      document.getElementById('hud-lifetime').textContent = Utils.formatNumber(Game.state.lifetimeSparks);
+      document.getElementById('hud-ultimate').textContent = Utils.formatNumber(Game.state.ultimateSparks);
+      document.getElementById('hud-prestige').textContent = Game.state.prestigeCount;
+      document.getElementById('hud-city').textContent = Cities.getDef(Game.state.currentCityId).name;
+      UI.renderIncomeBreakdown();
+      UI.updateCityCompletionBar();
+      UI.updateCosmeticTitle();
+    },
+
+    updateCosmeticTitle() {
+      const title = Achievements.getCosmeticTitle();
+      const el = document.getElementById('hud-cosmetic-title');
+      if (title) {
+        el.textContent = '✦ ' + title;
+        el.classList.remove('hidden');
+      } else {
+        el.classList.add('hidden');
+      }
+    },
+
+    renderIncomeBreakdown() {
+      const el = document.getElementById('income-breakdown');
+      const unlocked = Cities.data.filter((d) => Game.state.cities[d.id].unlocked);
+      if (unlocked.length <= 1) {
+        el.innerHTML = `<span class="income-total">${Utils.formatNumber(Cities.totalIncomePerSec())}/sec total</span>`;
+        return;
+      }
+      const parts = unlocked.map(
+        (d) => `<span class="income-part"><strong>${d.name}</strong> ${Utils.formatNumber(Cities.incomePerSec(d.id))}/s</span>`
+      );
+      el.innerHTML =
+        parts.join('<span class="income-op">+</span>') +
+        `<span class="income-op">=</span><span class="income-total">${Utils.formatNumber(Cities.totalIncomePerSec())}/s</span>`;
+    },
+
+    updateCityCompletionBar() {
+      const cityId = Game.state.currentCityId;
+      const def = Cities.getDef(cityId);
+      const pct = Cities.completionPercent(cityId);
+      const stars = Cities.starRating(cityId);
+
+      document.getElementById('city-completion-name').textContent = def.name;
+      document.getElementById('city-completion-pct').textContent = pct + '%';
+      document.getElementById('city-progress-fill').style.width = pct + '%';
+      document.getElementById('city-stars').textContent = '★'.repeat(stars) + '☆'.repeat(3 - stars);
+
+      const btn = document.getElementById('btn-prestige');
+      const available = Prestige.isAvailable();
+      btn.disabled = !available;
+      btn.textContent = available
+        ? `🔁 Prestige (+${Utils.formatNumber(Prestige.previewGain())} ⭐)`
+        : `🔁 Prestige (need ${Utils.formatNumber(Prestige.requiredLifetime())} lifetime ⚡)`;
+    },
+
+    // ---- City tabs ---------------------------------------------------
+    renderCityTabs() {
+      const container = document.getElementById('city-tabs');
+      container.innerHTML = '';
+      Cities.data.forEach((def) => {
+        const state = Game.state.cities[def.id];
+        const btn = document.createElement('button');
+        btn.className =
+          'city-tab' + (state.unlocked ? '' : ' locked') + (def.id === Game.state.currentCityId ? ' active' : '');
+        btn.dataset.city = def.id;
+        btn.innerHTML = `
+          <span class="city-tab-icon">${state.unlocked ? '🏙️' : '🔒'}</span>
+          <span class="city-tab-name">${def.name}</span>
+          ${state.unlocked ? `<span class="city-tab-pct">${Cities.completionPercent(def.id)}%</span>` : ''}
+          <span class="city-tab-details">
+            <span class="city-tab-status">${state.unlocked ? 'Unlocked' : 'Locked'}</span>
+            ${
+              state.unlocked
+                ? `<span class="city-tab-income">${Utils.formatNumber(Cities.incomePerSec(def.id))}/s</span>`
+                : `<span class="city-tab-cost">${Utils.formatNumber(def.unlockCost)} ⚡</span>`
+            }
+          </span>
+        `;
+        container.appendChild(btn);
+      });
+    },
+
+    // ---- City scene (background / skyline) ---------------------------
+    renderScene() {
+      const cityId = Game.state.currentCityId;
+      const def = Cities.getDef(cityId);
+      const cityState = Game.state.cities[cityId];
+
+      document.getElementById('city-scene').className = 'city-scene ' + def.theme;
+
+      const skyline = document.getElementById('scene-skyline');
+      skyline.innerHTML = '';
+      cityState.buildings.forEach((b, i) => {
+        const div = document.createElement('div');
+        div.className = 'skyline-building' + (b.unlocked ? ' lit' : '');
+        const heightPct = b.unlocked ? 20 + (b.level / Buildings.MAX_LEVEL) * 70 : 8;
+        div.style.height = heightPct + '%';
+        div.style.setProperty('--i', i);
+        skyline.appendChild(div);
+      });
+
+      UI.updateCityCompletionBar();
+    },
+
+    // ---- Building grid --------------------------------------------------
+    buildCardElement(building, index, cityId) {
+      const def = Buildings.getDef(cityId, index);
+      const card = document.createElement('div');
+      card.className =
+        'building-card' + (building.unlocked ? '' : ' locked') + (building.level >= Buildings.MAX_LEVEL ? ' maxed' : '');
+      card.id = `card-${cityId}-${index}`;
+      card.dataset.city = cityId;
+      card.dataset.index = index;
+
+      if (!building.unlocked) {
+        card.innerHTML = `
+          <div class="building-icon">🔒</div>
+          <div class="building-name">${def.name}</div>
+          <button class="btn btn-primary btn-block" data-action="unlock" ${
+            Game.state.sparks < Buildings.unlockCost(cityId, index) ? 'disabled' : ''
+          }>Unlock — ${Utils.formatNumber(Buildings.unlockCost(cityId, index))} ⚡</button>
+        `;
+        return card;
+      }
+
+      const incomeText = Utils.formatNumber(Buildings.incomePerCycle(building));
+      const intervalText = Buildings.interval(building).toFixed(1);
+      const canAuto = Buildings.canBuyAutoCollector(building);
+      const isMax = building.level >= Buildings.MAX_LEVEL;
+
+      card.innerHTML = `
+        <div class="building-header">
+          <div class="building-icon">${building.autoCollector ? '🤖' : '🏢'}</div>
+          <div class="building-name">${def.name}</div>
+          <div class="building-level">Lv. ${building.level}/${Buildings.MAX_LEVEL}</div>
+        </div>
+        <div class="building-stats">
+          <span>${incomeText} ⚡ / ${intervalText}s</span>
+          <span class="building-prestige-level" title="Highest level ever reached">🏅 ${Buildings.getPrestigeLevel(building)}</span>
+        </div>
+        <div class="progress-bar building-progress-bar">
+          <div class="progress-fill" id="progress-${cityId}-${index}" style="width:0%"></div>
+        </div>
+        <button class="btn collect-btn ${building.autoCollector ? 'auto' : ''}" id="collect-${cityId}-${index}" data-action="collect" ${
+        building.autoCollector ? 'disabled' : ''
+      }>
+          ${building.autoCollector ? 'Auto-Collecting' : 'Producing...'}
+        </button>
+        <div class="building-actions">
+          <button class="btn btn-small" data-action="levelup" ${isMax ? 'disabled' : ''}>
+            ${isMax ? 'MAX LEVEL' : `Level Up — ${Utils.formatNumber(Buildings.levelUpCost(building))} ⚡`}
+          </button>
+          ${
+            !building.upgradePurchased
+              ? `<button class="btn btn-small btn-upgrade" data-action="upgrade" ${
+                  Game.state.sparks < Buildings.upgradeCost(building) ? 'disabled' : ''
+                }>⬆ Upgrade (3x) — ${Utils.formatNumber(Buildings.upgradeCost(building))} ⚡</button>`
+              : `<span class="upgrade-badge">⬆ Upgraded</span>`
+          }
+          ${
+            canAuto
+              ? `<button class="btn btn-small btn-auto" data-action="autocollector" ${
+                  Game.state.sparks < Buildings.autoCollectorCost(building) ? 'disabled' : ''
+                }>🤖 Auto Collector — ${Utils.formatNumber(Buildings.autoCollectorCost(building))} ⚡</button>`
+              : ''
+          }
+        </div>
+        <div class="building-lifetime">Lifetime: ${Utils.formatNumber(building.lifetimeIncome)} ⚡</div>
+      `;
+      return card;
+    },
+
+    renderBuildingGrid() {
+      const grid = document.getElementById('building-grid');
+      grid.innerHTML = '';
+      const cityId = Game.state.currentCityId;
+      const cityState = Game.state.cities[cityId];
+      cityState.buildings.forEach((b, index) => {
+        grid.appendChild(UI.buildCardElement(b, index, cityId));
+      });
+      UI.updateCityCompletionBar();
+    },
+
+    /** Re-renders a single card in place (used after a manual collection). */
+    renderBuildingCard(building) {
+      if (building.cityId !== Game.state.currentCityId) return;
+      const card = document.getElementById(`card-${building.cityId}-${building.index}`);
+      if (!card) return;
+      card.replaceWith(UI.buildCardElement(building, building.index, building.cityId));
+    },
+
+    /** Called every animation frame: cheap progress-bar/ready-state updates only. */
+    updateDynamicUI() {
+      const cityId = Game.state.currentCityId;
+      const cityState = Game.state.cities[cityId];
+      if (!cityState) return;
+
+      cityState.buildings.forEach((b, index) => {
+        if (!b.unlocked) return;
+        const interval = Buildings.interval(b);
+        const fill = document.getElementById(`progress-${cityId}-${index}`);
+        if (fill) {
+          const pct = b.autoCollector ? (b.productionTimer / interval) * 100 : (b.productionTimer / interval) * 100;
+          fill.style.width = Math.min(100, pct) + '%';
+        }
+        const collectBtn = document.getElementById(`collect-${cityId}-${index}`);
+        if (collectBtn && !b.autoCollector) {
+          collectBtn.classList.toggle('ready', b.readyToCollect);
+          collectBtn.disabled = !b.readyToCollect;
+          collectBtn.textContent = b.readyToCollect ? 'Collect! ⚡' : 'Producing...';
+        }
+
+        const card = document.getElementById(`card-${cityId}-${index}`);
+        if (!card) return;
+        const unlockBtn = card.querySelector('[data-action="unlock"]');
+        if (unlockBtn) unlockBtn.disabled = Game.state.sparks < Buildings.unlockCost(cityId, index);
+        const levelBtn = card.querySelector('[data-action="levelup"]');
+        if (levelBtn && b.level < Buildings.MAX_LEVEL) levelBtn.disabled = Game.state.sparks < Buildings.levelUpCost(b);
+        const upgradeBtn = card.querySelector('[data-action="upgrade"]');
+        if (upgradeBtn) upgradeBtn.disabled = Game.state.sparks < Buildings.upgradeCost(b);
+        const autoBtn = card.querySelector('[data-action="autocollector"]');
+        if (autoBtn) autoBtn.disabled = Game.state.sparks < Buildings.autoCollectorCost(b);
+      });
+    },
+
+    // ---- Prestige shop -------------------------------------------------
+    renderPrestigeShop() {
+      const list = document.getElementById('prestige-shop-list');
+      list.innerHTML = '';
+      Prestige.SHOP_UPGRADES.forEach((def) => {
+        const level = Prestige.getUpgradeLevel(def.id);
+        const maxed = level >= def.maxLevel;
+        const cost = Prestige.upgradeCost(def.id);
+        const row = document.createElement('div');
+        row.className = 'shop-row' + (maxed ? ' maxed' : '');
+        row.innerHTML = `
+          <div class="shop-icon">${def.icon}</div>
+          <div class="shop-info">
+            <div class="shop-name">${def.name} <span class="shop-level">Lv. ${level}/${def.maxLevel}</span></div>
+            <div class="shop-desc">${def.desc}</div>
+          </div>
+          <button class="btn btn-small" data-upgrade="${def.id}" ${
+          maxed || Game.state.ultimateSparks < cost ? 'disabled' : ''
+        }>${maxed ? 'MAXED' : `${Utils.formatNumber(cost)} ⭐`}</button>
+        `;
+        list.appendChild(row);
+      });
+      document.getElementById('shop-ultimate-balance').textContent = Utils.formatNumber(Game.state.ultimateSparks);
+    },
+
+    // ---- Achievements ---------------------------------------------------
+    renderAchievements() {
+      const list = document.getElementById('achievements-list');
+      list.innerHTML = '';
+      Achievements.LIST.forEach((def) => {
+        const unlocked = Achievements.isUnlocked(def.id);
+        const card = document.createElement('div');
+        card.className = 'achievement-card' + (unlocked ? ' unlocked' : ' locked');
+        card.innerHTML = `
+          <div class="achievement-icon">${unlocked ? def.icon : '❔'}</div>
+          <div class="achievement-name">${unlocked ? def.name : '???'}</div>
+          <div class="achievement-desc">${def.desc}</div>
+          <div class="achievement-bonus">+${Math.round(def.bonus * 100)}% Income</div>
+        `;
+        list.appendChild(card);
+      });
+      document.getElementById('achievements-progress').textContent = `${Achievements.unlockedCount()}/${Achievements.LIST.length}`;
+    },
+
+    // ---- Statistics ------------------------------------------------------
+    renderStats() {
+      const s = Game.state.stats;
+      const sps = Cities.totalIncomePerSec();
+      const rows = [
+        ['Lifetime Sparks', Utils.formatNumber(Game.state.lifetimeSparks)],
+        ['Sparks / Second', Utils.formatNumber(sps)],
+        ['Sparks / Minute', Utils.formatNumber(sps * 60)],
+        ['Sparks / Hour', Utils.formatNumber(sps * 3600)],
+        ['Total Clicks', s.totalClicks],
+        ['Buildings Purchased', s.buildingsPurchased],
+        ['Buildings Maxed', s.buildingsMaxed],
+        ['Cities Completed', `${s.citiesCompletedCount}/5`],
+        ['Time Played', Utils.formatDuration(s.timePlayed)],
+        ['Offline Earnings', Utils.formatNumber(s.offlineEarningsTotal)],
+        ['Prestiges', Game.state.prestigeCount],
+        ['Highest Income/sec', Utils.formatNumber(s.highestIncomePerSec)],
+        ['Highest Sparks', Utils.formatNumber(s.highestSparks)],
+      ];
+      document.getElementById('stats-list').innerHTML = rows
+        .map(([label, val]) => `<div class="stat-row"><span>${label}</span><strong>${val}</strong></div>`)
+        .join('');
+    },
+
+    // ---- Unlock / completion modals -----------------------------------
+    openUnlockModal(def) {
+      UI._pendingUnlockCity = def.id;
+      document.getElementById('unlock-city-name').textContent = def.name;
+      document.getElementById('unlock-city-reward').textContent = 'Permanent Reward: ' + def.rewardLabel;
+      document.getElementById('unlock-city-cost').textContent = Utils.formatNumber(def.unlockCost);
+      document.getElementById('unlock-preview').className = 'unlock-preview ' + def.theme;
+      document.getElementById('btn-unlock-confirm').disabled = Game.state.sparks < def.unlockCost;
+      UI.openModal('modal-unlock');
+    },
+
+    showCityCompletionModal(cityId) {
+      const def = Cities.getDef(cityId);
+      document.getElementById('completion-city-name').textContent = def.name;
+      document.getElementById('completion-reward-text').textContent = 'Permanent Reward: ' + def.rewardLabel;
+      UI.openModal('modal-completion');
+    },
+
+    // ---- Effects: floating text / glow / confetti / toasts / transitions ----
+    spawnFloatingText(building, gainedInfo) {
+      if (!Game.state.settings.floatingNumbers) return;
+      const card = document.getElementById(`card-${building.cityId}-${building.index}`);
+      if (!card) return;
+      const rect = card.getBoundingClientRect();
+      const el = document.createElement('div');
+      el.className = 'floating-text' + (gainedInfo.isCrit ? ' crit' : '');
+      el.textContent = (gainedInfo.isCrit ? 'CRIT! +' : '+') + Utils.formatNumber(gainedInfo.amount) + ' ⚡';
+      el.style.left = rect.left + rect.width / 2 + 'px';
+      el.style.top = rect.top + 'px';
+      document.getElementById('floating-layer').appendChild(el);
+      setTimeout(() => el.remove(), 1200);
+    },
+
+    spawnGlow(cityId, index) {
+      const card = document.getElementById(`card-${cityId}-${index}`);
+      if (!card) return;
+      card.classList.add('glow-pulse');
+      setTimeout(() => card.classList.remove('glow-pulse'), 900);
+    },
+
+    notify(message, type) {
+      if (!Game.state.settings.notifications) return;
+      const toast = document.createElement('div');
+      toast.className = 'toast toast-' + (type || 'info');
+      toast.textContent = message;
+      document.getElementById('toast-layer').appendChild(toast);
+      setTimeout(() => {
+        toast.classList.add('toast-out');
+        setTimeout(() => toast.remove(), 300);
+      }, 3200);
+    },
+
+    playScreenTransition() {
+      if (!Game.state.settings.animations) return;
+      const flash = document.createElement('div');
+      flash.className = 'screen-flash';
+      document.body.appendChild(flash);
+      setTimeout(() => flash.remove(), 700);
+    },
+
+    spawnConfetti() {
+      if (!Game.state.settings.animations) return;
+      const canvas = document.getElementById('confetti-canvas');
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+      canvas.classList.add('active');
+      const ctx = canvas.getContext('2d');
+      const colors = ['#ffd93d', '#6bcbef', '#ff6b6b', '#4ecdc4', '#a78bfa'];
+      // Fewer particles on small/low-end screens keeps this smooth without changing the effect itself.
+      const particleCount = window.innerWidth < 600 ? 50 : 120;
+      const particles = Array.from({ length: particleCount }, () => ({
+        x: Math.random() * canvas.width,
+        y: -20 - Math.random() * canvas.height * 0.3,
+        vx: (Math.random() - 0.5) * 4,
+        vy: 2 + Math.random() * 4,
+        size: 4 + Math.random() * 5,
+        color: colors[Math.floor(Math.random() * colors.length)],
+        rotation: Math.random() * 360,
+        vr: (Math.random() - 0.5) * 10,
+      }));
+      let frames = 0;
+      function step() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        particles.forEach((p) => {
+          p.x += p.vx;
+          p.y += p.vy;
+          p.rotation += p.vr;
+          ctx.save();
+          ctx.translate(p.x, p.y);
+          ctx.rotate((p.rotation * Math.PI) / 180);
+          ctx.fillStyle = p.color;
+          ctx.fillRect(-p.size / 2, -p.size / 2, p.size, p.size);
+          ctx.restore();
+        });
+        frames++;
+        if (frames < 150) {
+          requestAnimationFrame(step);
+        } else {
+          canvas.classList.remove('active');
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+        }
+      }
+      step();
+    },
+
+    fullRefresh() {
+      Game.Settings.apply();
+      UI.renderCityTabs();
+      UI.renderScene();
+      UI.renderBuildingGrid();
+      UI.renderPrestigeShop();
+      UI.renderAchievements();
+      UI.renderEventOrb();
+      UI.renderActiveBuffsBar();
+      UI.refreshHUD();
+    },
+
+    // ---- Random Bonus Events --------------------------------------------
+    renderEventOrb() {
+      const layer = document.getElementById('event-orb-layer');
+      layer.innerHTML = '';
+      const pending = Game.state.events.pendingOrb;
+      if (!pending) return;
+
+      const def = Game.Events.DEFS.find((e) => e.id === pending.id);
+      if (!def) return;
+
+      const orb = document.createElement('button');
+      orb.className = 'event-orb';
+      orb.id = 'event-orb';
+      orb.title = def.desc;
+      // Deterministic-ish placement that still varies per spawn, without Math.random() at render time.
+      const left = 10 + ((pending.timeLeft * 37) % 70);
+      const top = 15 + ((pending.timeLeft * 53) % 55);
+      orb.style.left = left + '%';
+      orb.style.top = top + '%';
+      orb.innerHTML = `<span class="event-orb-icon">${def.icon}</span><span class="event-orb-name">${def.name}</span><span class="event-orb-timer" id="event-orb-timer">${Math.ceil(
+        pending.timeLeft
+      )}s</span>`;
+      layer.appendChild(orb);
+    },
+
+    /** Cheap per-tick update of the orb's countdown text, without rebuilding the DOM. */
+    updateEventOrbCountdown() {
+      const pending = Game.state.events.pendingOrb;
+      const timerEl = document.getElementById('event-orb-timer');
+      if (pending && timerEl) timerEl.textContent = Math.ceil(pending.timeLeft) + 's';
+    },
+
+    renderActiveBuffsBar() {
+      const bar = document.getElementById('active-buffs-bar');
+      const buffs = Game.state.events.activeBuffs;
+      if (!buffs.length) {
+        bar.innerHTML = '';
+        bar.classList.add('hidden');
+        return;
+      }
+      bar.classList.remove('hidden');
+      bar.innerHTML = buffs
+        .map(
+          (b) =>
+            `<span class="buff-chip">${b.icon || '⏳'} ${b.label} ×${b.value} — ${Math.ceil(b.timeLeft)}s</span>`
+        )
+        .join('');
+    },
+
+    // ---- Event binding ---------------------------------------------------
+    bindGlobalEvents() {
+      document.getElementById('building-grid').addEventListener('click', (e) => {
+        const btn = e.target.closest('[data-action]');
+        if (!btn) return;
+        const card = btn.closest('.building-card');
+        const cityId = card.dataset.city;
+        const index = parseInt(card.dataset.index, 10);
+        const building = Game.state.cities[cityId].buildings[index];
+        const action = btn.dataset.action;
+
+        if (action === 'unlock') Buildings.unlock(cityId, index);
+        else if (action === 'levelup') Buildings.levelUp(building);
+        else if (action === 'upgrade') Buildings.purchaseUpgrade(building);
+        else if (action === 'autocollector') Buildings.purchaseAutoCollector(building);
+        else if (action === 'collect') Buildings.collect(building);
+      });
+
+      document.getElementById('city-tabs').addEventListener('click', (e) => {
+        const tab = e.target.closest('.city-tab');
+        if (tab) Cities.requestUnlock(tab.dataset.city);
+      });
+
+      document.getElementById('event-orb-layer').addEventListener('click', (e) => {
+        if (e.target.closest('.event-orb')) Game.Events.claimOrb();
+      });
+
+      document.getElementById('btn-stats').addEventListener('click', () => {
+        UI.renderStats();
+        UI.openModal('modal-stats');
+      });
+      document.getElementById('btn-achievements').addEventListener('click', () => {
+        UI.renderAchievements();
+        UI.openModal('modal-achievements');
+      });
+      document.getElementById('btn-prestige-shop').addEventListener('click', () => {
+        UI.renderPrestigeShop();
+        UI.openModal('modal-prestige-shop');
+      });
+      document.getElementById('btn-settings').addEventListener('click', () => UI.openModal('modal-settings'));
+
+      document.getElementById('btn-prestige').addEventListener('click', () => {
+        if (!Prestige.isAvailable()) return;
+        document.getElementById('prestige-gain-preview').textContent = Utils.formatNumber(Prestige.previewGain());
+        UI.openModal('modal-prestige');
+      });
+      document.getElementById('btn-prestige-confirm').addEventListener('click', () => {
+        Prestige.doPrestige();
+        UI.closeModal('modal-prestige');
+      });
+      document.getElementById('btn-prestige-cancel').addEventListener('click', () => UI.closeModal('modal-prestige'));
+
+      document.getElementById('btn-unlock-confirm').addEventListener('click', () => {
+        if (Cities.confirmUnlock(UI._pendingUnlockCity)) UI.closeModal('modal-unlock');
+      });
+      document.getElementById('btn-unlock-cancel').addEventListener('click', () => UI.closeModal('modal-unlock'));
+      document.getElementById('btn-completion-close').addEventListener('click', () => UI.closeModal('modal-completion'));
+      document.getElementById('btn-offline-close').addEventListener('click', () => {
+        UI.closeModal('modal-offline');
+        UI.fullRefresh();
+        Game.Save.save();
+      });
+
+      document.getElementById('prestige-shop-list').addEventListener('click', (e) => {
+        const btn = e.target.closest('[data-upgrade]');
+        if (btn) Prestige.purchaseUpgrade(btn.dataset.upgrade);
+      });
+
+      document.querySelectorAll('.modal-close').forEach((btn) => {
+        btn.addEventListener('click', () => UI.closeModal(btn.dataset.close));
+      });
+      document.querySelectorAll('.modal-overlay').forEach((overlay) => {
+        overlay.addEventListener('click', (e) => {
+          if (e.target === overlay) overlay.classList.add('hidden');
+        });
+      });
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+          document.querySelectorAll('.modal-overlay:not(.hidden)').forEach((m) => m.classList.add('hidden'));
+        }
+      });
+
+      window.addEventListener('resize', () => {
+        const canvas = document.getElementById('confetti-canvas');
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+      });
+    },
+  };
+
+  // ===================================================================
+  // Main loop
+  // ===================================================================
+  let lastFrameTime = null;
+  let hudTickAccumulator = 0;
+
+  function loop(timestamp) {
+    if (lastFrameTime === null) lastFrameTime = timestamp;
+    let dt = (timestamp - lastFrameTime) / 1000;
+    lastFrameTime = timestamp;
+    dt = Math.min(dt, 0.25); // avoid huge jumps if the tab was backgrounded briefly
+
+    Game.state.stats.timePlayed += dt;
+    Buildings.tick(dt);
+    Game.Events.tick(dt);
+    UI.updateDynamicUI();
+
+    hudTickAccumulator += dt;
+    if (hudTickAccumulator >= 0.2) {
+      hudTickAccumulator = 0;
+      UI.refreshHUD();
+      UI.renderActiveBuffsBar();
+      UI.updateEventOrbCountdown();
+      const currentSps = Cities.totalIncomePerSec();
+      if (currentSps > Game.state.stats.highestIncomePerSec) Game.state.stats.highestIncomePerSec = currentSps;
+      if (Game.state.sparks > Game.state.stats.highestSparks) Game.state.stats.highestSparks = Game.state.sparks;
+    }
+
+    requestAnimationFrame(loop);
+  }
+
+  // ===================================================================
+  // Init
+  // ===================================================================
+  function init() {
+    Game.state = createFreshState();
+
+    const saved = Game.Save.load();
+    if (saved) Object.assign(Game.state, saved);
+
+    Game.Settings.apply();
+    Game.Audio.init();
+    UI.bindGlobalEvents();
+    Game.Settings.bindEvents();
+    UI.fullRefresh();
+
+    Game.Offline.resolveOnLoad();
+    UI.fullRefresh();
+
+    Game.Save.startAutosave();
+    if (Game.state.settings.music) Game.Audio.startMusic();
+
+    requestAnimationFrame(loop);
+  }
+
+  window.Game.Utils = Utils;
+  window.Game.UI = UI;
+  window.Game.createFreshState = createFreshState;
+  window.Game.init = init;
+  window.Game.loop = loop;
+
+  init();
+})();
+
+</script>
