@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+<title>Light City — Idle Incremental</title>
+<link rel="stylesheet" href="style.css" />
+</head>
+<body class="theme-dark">
+
+  <!-- ============ TOP HUD ============ -->
+  <header id="hud" class="hud">
+    <div class="hud-brand">
+      <span class="hud-logo">⚡</span>
+      <span class="hud-title">Light City</span>
+      <span id="hud-cosmetic-title" class="hud-cosmetic-title hidden"></span>
+    </div>
+
+    <div class="hud-stats">
+      <div class="hud-stat" title="Current Sparks">
+        <span class="hud-icon">⚡</span>
+        <span id="hud-sparks" class="hud-value">0</span>
+      </div>
+      <div class="hud-stat" title="Sparks per second">
+        <span class="hud-icon">📈</span>
+        <span id="hud-sps" class="hud-value">0</span>/s
+      </div>
+      <div class="hud-stat" title="Total Lifetime Income">
+        <span class="hud-icon">🏦</span>
+        <span id="hud-lifetime" class="hud-value">0</span>
+      </div>
+      <div class="hud-stat" title="Ultimate Sparks">
+        <span class="hud-icon">⭐</span>
+        <span id="hud-ultimate" class="hud-value">0</span>
+      </div>
+      <div class="hud-stat" title="Prestige Count">
+        <span class="hud-icon">🔁</span>
+        <span id="hud-prestige" class="hud-value">0</span>
+      </div>
+      <div class="hud-stat" title="Current City">
+        <span class="hud-icon">🏙️</span>
+        <span id="hud-city" class="hud-value">Green Village</span>
+      </div>
+    </div>
+
+    <div class="hud-actions">
+      <button id="btn-stats" class="hud-btn" title="Statistics">📊</button>
+      <button id="btn-achievements" class="hud-btn" title="Achievements">🏆</button>
+      <button id="btn-prestige-shop" class="hud-btn" title="Prestige Shop">⭐</button>
+      <button id="btn-settings" class="hud-btn" title="Settings">⚙️</button>
+    </div>
+  </header>
+
+  <!-- ============ CITY TOTAL INCOME BAR ============ -->
+  <div id="income-breakdown" class="income-breakdown"></div>
+
+  <!-- ============ ACTIVE EVENT BUFFS ============ -->
+  <div id="active-buffs-bar" class="active-buffs-bar"></div>
+
+  <!-- ============ CITY TABS ============ -->
+  <nav id="city-tabs" class="city-tabs"></nav>
+
+  <!-- ============ MAIN GAME AREA ============ -->
+  <main id="game-area" class="game-area">
+
+    <!-- City scene (background/skyline/weather) -->
+    <section id="city-scene" class="city-scene">
+      <div id="scene-sky" class="scene-sky"></div>
+      <div id="scene-weather" class="scene-weather"></div>
+      <div id="scene-skyline" class="scene-skyline"></div>
+      <div id="scene-ground" class="scene-ground"></div>
+
+      <div class="city-scene-overlay">
+        <div class="city-completion">
+          <div class="city-completion-label">
+            <span id="city-completion-name">Green Village</span>
+            <span id="city-completion-pct">0%</span>
+          </div>
+          <div class="progress-bar city-progress">
+            <div id="city-progress-fill" class="progress-fill"></div>
+          </div>
+          <div class="city-stars" id="city-stars">☆☆☆</div>
+        </div>
+        <div class="prestige-cta-wrap">
+          <button id="btn-prestige" class="btn-prestige" disabled>🔁 Prestige</button>
+        </div>
+      </div>
+
+      <!-- Random Bonus Event orb spawns here -->
+      <div id="event-orb-layer" class="event-orb-layer"></div>
+    </section>
+
+    <!-- Building grid -->
+    <section id="building-grid" class="building-grid"></section>
+  </main>
+
+  <!-- ============ FLOATING TEXT LAYER ============ -->
+  <div id="floating-layer" class="floating-layer"></div>
+
+  <!-- ============ NOTIFICATION TOASTS ============ -->
+  <div id="toast-layer" class="toast-layer"></div>
+
+  <!-- ============ CONFETTI LAYER ============ -->
+  <canvas id="confetti-canvas" class="confetti-canvas"></canvas>
+
+  <!-- ============ MODALS ============ -->
+
+  <!-- City unlock screen -->
+  <div id="modal-unlock" class="modal-overlay hidden">
+    <div class="modal unlock-modal">
+      <div class="unlock-preview" id="unlock-preview"></div>
+      <h2 id="unlock-city-name">City Name</h2>
+      <p class="unlock-reward" id="unlock-city-reward">Reward</p>
+      <p class="unlock-cost">Cost: <span id="unlock-city-cost">0</span> ⚡</p>
+      <div class="modal-actions">
+        <button id="btn-unlock-confirm" class="btn btn-primary">Unlock City</button>
+        <button id="btn-unlock-cancel" class="btn btn-secondary">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- City completion celebration -->
+  <div id="modal-completion" class="modal-overlay hidden">
+    <div class="modal completion-modal">
+      <div class="completion-badge">🏆</div>
+      <h2>City Complete!</h2>
+      <p id="completion-city-name">Green Village</p>
+      <p class="completion-reward" id="completion-reward-text"></p>
+      <button id="btn-completion-close" class="btn btn-primary">Continue</button>
+    </div>
+  </div>
+
+  <!-- Prestige confirm -->
+  <div id="modal-prestige" class="modal-overlay hidden">
+    <div class="modal prestige-modal">
+      <div class="completion-badge">🔁</div>
+      <h2>Prestige</h2>
+      <p>Reset your progress in exchange for <strong id="prestige-gain-preview">0</strong> ⭐ Ultimate Sparks.</p>
+      <p class="prestige-warning">Sparks, buildings, levels, upgrades, auto collectors, and city unlocks will reset. Ultimate Sparks, Lifetime Sparks, Prestige Upgrades and Achievements are kept.</p>
+      <div class="modal-actions">
+        <button id="btn-prestige-confirm" class="btn btn-primary">Confirm Prestige</button>
+        <button id="btn-prestige-cancel" class="btn btn-secondary">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Prestige shop -->
+  <div id="modal-prestige-shop" class="modal-overlay hidden">
+    <div class="modal wide-modal">
+      <div class="modal-header">
+        <h2>⭐ Prestige Shop</h2>
+        <button class="modal-close" data-close="modal-prestige-shop">✕</button>
+      </div>
+      <p class="modal-subtitle">Ultimate Sparks: <span id="shop-ultimate-balance">0</span> ⭐</p>
+      <div id="prestige-shop-list" class="prestige-shop-list"></div>
+    </div>
+  </div>
+
+  <!-- Achievements -->
+  <div id="modal-achievements" class="modal-overlay hidden">
+    <div class="modal wide-modal">
+      <div class="modal-header">
+        <h2>🏆 Achievements</h2>
+        <button class="modal-close" data-close="modal-achievements">✕</button>
+      </div>
+      <p class="modal-subtitle"><span id="achievements-progress">0/0</span> unlocked</p>
+      <div id="achievements-list" class="achievements-list"></div>
+    </div>
+  </div>
+
+  <!-- Statistics -->
+  <div id="modal-stats" class="modal-overlay hidden">
+    <div class="modal wide-modal">
+      <div class="modal-header">
+        <h2>📊 Statistics</h2>
+        <button class="modal-close" data-close="modal-stats">✕</button>
+      </div>
+      <div id="stats-list" class="stats-list"></div>
+    </div>
+  </div>
+
+  <!-- Settings -->
+  <div id="modal-settings" class="modal-overlay hidden">
+    <div class="modal">
+      <div class="modal-header">
+        <h2>⚙️ Settings</h2>
+        <button class="modal-close" data-close="modal-settings">✕</button>
+      </div>
+      <div class="settings-list">
+        <div class="settings-row">
+          <span>Theme</span>
+          <div class="segmented" id="setting-theme">
+            <button data-value="dark" class="seg-btn active">🌙 Dark</button>
+            <button data-value="light" class="seg-btn">☀️ Light</button>
+          </div>
+        </div>
+        <div class="settings-row"><span>Sound Effects</span><label class="switch"><input type="checkbox" id="setting-sound" checked><span class="slider"></span></label></div>
+        <div class="settings-row"><span>Music</span><label class="switch"><input type="checkbox" id="setting-music"><span class="slider"></span></label></div>
+        <div class="settings-row"><span>Animations</span><label class="switch"><input type="checkbox" id="setting-animations" checked><span class="slider"></span></label></div>
+        <div class="settings-row"><span>Floating Numbers</span><label class="switch"><input type="checkbox" id="setting-floating" checked><span class="slider"></span></label></div>
+        <div class="settings-row"><span>Notifications</span><label class="switch"><input type="checkbox" id="setting-notifications" checked><span class="slider"></span></label></div>
+        <hr class="settings-divider" />
+        <div class="settings-row">
+          <button id="btn-export-save" class="btn btn-secondary btn-block">Export Save</button>
+        </div>
+        <div class="settings-row">
+          <button id="btn-import-save" class="btn btn-secondary btn-block">Import Save</button>
+        </div>
+        <div class="settings-row">
+          <button id="btn-reset-save" class="btn btn-danger btn-block">Reset Save</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Offline earnings popup -->
+  <div id="modal-offline" class="modal-overlay hidden">
+    <div class="modal">
+      <div class="completion-badge">☕</div>
+      <h2>Welcome Back!</h2>
+      <p id="offline-time-away">You were away for 0m.</p>
+      <p class="offline-earned">+<span id="offline-earned-amount">0</span> ⚡</p>
+      <p class="offline-multiplier-text" id="offline-multiplier"></p>
+      <button id="btn-offline-close" class="btn btn-primary">Collect</button>
+    </div>
+  </div>
+
+  <!-- Hidden file input for import -->
+  <input type="file" id="import-file-input" accept=".json,application/json" style="display:none" />
+
+  <script>window.Game = {};</script>
+  <script src="cities.js"></script>
+  <script src="buildings.js"></script>
+  <script src="prestige.js"></script>
+  <script src="achievements.js"></script>
+  <script src="audio.js"></script>
+  <script src="settings.js"></script>
+  <script src="save.js"></script>
+  <script src="offline.js"></script>
+  <script src="events.js"></script>
+  <script src="game.js"></script>
+</body>
+</html>
