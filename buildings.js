@@ -10,12 +10,16 @@
   const MAX_LEVEL = 100;
   const AUTO_COLLECTOR_MIN_LEVEL = 20;
 
-  // Base unlock cost of "building slot 0" for each city tier (index matches CITY_DATA order).
-  const BUILDING_BASE_COST = [10, 15000, 1500000, 150000000, 15000000000];
-  const BUILDING_COST_GROWTH = 7;      // cost multiplier per building slot (0-5) within a city
+  // Cost of each building slot (0-5) within a city, relative to that city's own
+  // base — e.g. for Green Village (base 1,000): 1,000 / 5,000 / 25,000 / 100,000 /
+  // 500,000 / 2,000,000, matching the game's target cost progression exactly.
+  const SLOT_SHAPE_RATIO = [1, 5, 25, 100, 500, 2000];
+  // Per-city base cost (building slot 0's underlying value), ~100x per city tier —
+  // mirrors the ~100x jumps between city unlock costs (1e6 / 1e8 / 1e10 / 1e12).
+  const CITY_BASE_COST = [1000, 100000, 10000000, 1000000000, 100000000000];
   const LEVEL_COST_GROWTH = 1.15;      // cost multiplier per level-up
   const LEVEL_INCOME_GROWTH = 1.13;    // income multiplier per level-up
-  const INCOME_TO_COST_RATIO = 0.10;   // base income per cycle, relative to unlock cost
+  const INCOME_TO_COST_RATIO = 0.01;   // base income per cycle, relative to unlock cost
   const BASE_INTERVAL = 4;             // seconds, for building slot 0
   const INTERVAL_STEP = 0.5;           // extra seconds per building slot within a city
   const UPGRADE_COST_MULT = 40;        // upgrade cost relative to unlock cost
@@ -56,7 +60,7 @@
      * off of this, not off the (possibly-free) unlock cost. */
     costBasis(cityId, index) {
       const { cityIndex } = Buildings.getDef(cityId, index);
-      return BUILDING_BASE_COST[cityIndex] * Math.pow(BUILDING_COST_GROWTH, index);
+      return CITY_BASE_COST[cityIndex] * SLOT_SHAPE_RATIO[index];
     },
 
     /** Cost to unlock the building (before cost-reduction discount). The very first
