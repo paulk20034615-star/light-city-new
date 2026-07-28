@@ -89,7 +89,6 @@
         highestSparks: 0,
       },
       lastActiveTimestamp: Date.now(),
-      pendingOffline: null,
     };
   }
 
@@ -364,40 +363,19 @@
     renderAchievements() {
       const list = document.getElementById('achievements-list');
       list.innerHTML = '';
-      const STATUS_LABEL = { locked: 'Locked', in_progress: 'In Progress', ready: 'Ready to Claim', claimed: 'Claimed' };
-
       Achievements.LIST.forEach((def) => {
-        const status = Achievements.getStatus(def.id);
-        const progress = Achievements.getProgress(def.id);
-
-        const rewardParts = [];
-        if (def.sparksReward) rewardParts.push(`${Utils.formatNumber(def.sparksReward)} ⚡`);
-        if (def.ultimateSparksReward) rewardParts.push(`${def.ultimateSparksReward} ⭐`);
-        if (def.bonus) rewardParts.push(`+${Math.round(def.bonus * 100)}% Income`);
-        if (def.clickBonus) rewardParts.push(`+${Math.round(def.clickBonus * 100)}% Click Power`);
-        if (def.cosmetic) rewardParts.push(`"${def.cosmetic}" title`);
-
-        const showProgressBar = progress && (status === 'locked' || status === 'in_progress');
-
+        const unlocked = Achievements.isUnlocked(def.id);
         const card = document.createElement('div');
-        card.className = `achievement-card status-${status}`;
+        card.className = 'achievement-card' + (unlocked ? ' unlocked' : ' locked');
         card.innerHTML = `
-          <div class="achievement-icon">${def.icon}</div>
-          <div class="achievement-name">${def.name}</div>
+          <div class="achievement-icon">${unlocked ? def.icon : '❔'}</div>
+          <div class="achievement-name">${unlocked ? def.name : '???'}</div>
           <div class="achievement-desc">${def.desc}</div>
-          ${
-            showProgressBar
-              ? `<div class="progress-bar achievement-progress-bar"><div class="progress-fill" style="width:${progress.pct}%"></div></div>
-                 <div class="achievement-progress-text">${Utils.formatNumber(progress.current)} / ${Utils.formatNumber(progress.target)}</div>`
-              : ''
-          }
-          <div class="achievement-reward">Reward: ${rewardParts.join(', ') || '—'}</div>
-          <div class="achievement-status-badge status-${status}">${STATUS_LABEL[status]}</div>
-          ${status === 'ready' ? `<button class="btn btn-small btn-primary achievement-claim-btn" data-claim="${def.id}">Claim Reward</button>` : ''}
+          <div class="achievement-bonus">+${Math.round(def.bonus * 100)}% Income</div>
         `;
         list.appendChild(card);
       });
-      document.getElementById('achievements-progress').textContent = `${Achievements.claimedCount()}/${Achievements.LIST.length} claimed`;
+      document.getElementById('achievements-progress').textContent = `${Achievements.unlockedCount()}/${Achievements.LIST.length}`;
     },
 
     // ---- Statistics ------------------------------------------------------
@@ -625,10 +603,6 @@
         UI.renderAchievements();
         UI.openModal('modal-achievements');
       });
-      document.getElementById('achievements-list').addEventListener('click', (e) => {
-        const btn = e.target.closest('[data-claim]');
-        if (btn) Achievements.claim(btn.dataset.claim);
-      });
       document.getElementById('btn-prestige-shop').addEventListener('click', () => {
         UI.renderPrestigeShop();
         UI.openModal('modal-prestige-shop');
@@ -651,7 +625,11 @@
       });
       document.getElementById('btn-unlock-cancel').addEventListener('click', () => UI.closeModal('modal-unlock'));
       document.getElementById('btn-completion-close').addEventListener('click', () => UI.closeModal('modal-completion'));
-      document.getElementById('btn-offline-claim').addEventListener('click', () => Game.Offline.claim());
+      document.getElementById('btn-offline-close').addEventListener('click', () => {
+        UI.closeModal('modal-offline');
+        UI.fullRefresh();
+        Game.Save.save();
+      });
 
       document.getElementById('prestige-shop-list').addEventListener('click', (e) => {
         const btn = e.target.closest('[data-upgrade]');
